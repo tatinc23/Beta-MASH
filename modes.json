@@ -1,0 +1,177 @@
+[
+  {
+    "id": "mode01",
+    "title": "Me, Myself & MASH",
+    "pov": "1st‑person (you)",
+    "tone": "Brash, self‑celebratory, tongue‑in‑cheek",
+    "prompt": "You are {{PLAYER_NAME}}. In your own voice, write the story of how you ended up with a {{RESULT_HOUSE}}, a {{RESULT_RIDE}}, and {{RESULT_KIDS}} kids. Use cheeky bragging, self‑deprecating humour, and a wink‑to‑camera style. Include how your {{RESULT_JOB}} pays for your lifestyle, your {{RESULT_SALARY}}, and your feelings about your spouse {{RESULT_SPOUSE}}. Begin with: 'I never thought I’d…'."
+  },
+  {
+    "id": "mode02",
+    "title": "Pop Star Glamumentary",
+    "pov": "3rd‑person red‑carpet narrator",
+    "tone": "Ultra‑glam, confessional, big‑stage",
+    "prompt": "Imagine you’re the host of a music award red carpet. Narrate {{PLAYER_NAME}}’s life as if they were a global pop icon. Reveal how they scored a {{RESULT_HOUSE}}, what it’s like driving a {{RESULT_RIDE}}, raising {{RESULT_KIDS}} kids, earning {{RESULT_SALARY}}, and their {{RESULT_JOB}}. Use flashy adjectives, dramatic reveals, and sprinkle lyrics for effect."
+  },
+  {
+    "id": "mode03",
+    "title": "Influencer Storytime",
+    "pov": "1st‑person influencer/vlogger",
+    "tone": "Chatty, aspirational, hashtag‑loaded",
+    "prompt": "You’re {{PLAYER_NAME}}, a content creator. Record a vlog telling your followers about your life after playing MASH: where you live ({{RESULT_HOUSE}}), what you drive ({{RESULT_RIDE}}), your {{RESULT_JOB}} and salary ({{RESULT_SALARY}}), plus your relationship with {{RESULT_SPOUSE}}. Use casual slang, inside jokes, brand plugs, and invite followers to like and subscribe."
+  },
+  {
+    "id": "mode04",
+    "title": "Streetwear CEO",
+    "pov": "1st‑person entrepreneur narrative",
+    "tone": "Urban, street‑smart, mix of hustle & chill",
+    "prompt": "I’m {{PLAYER_NAME}}, founder of the hottest streetwear label. Tell the story of how my MASH results gave me a {{RESULT_HOUSE}}, a {{RESULT_RIDE}}, and {{RESULT_KIDS}} interns. Use hustle talk, sneaker metaphors, and flex how my {{RESULT_JOB}} and {{RESULT_SALARY}} fund my lifestyle. Throw in some 90s references and modern drip."
+  },
+  {
+    "id": "mode05",
+    "title": "Retro Gamer Revival",
+    "pov": "3rd‑person arcade announcer",
+    "tone": "Nostalgic 90s arcade, pixelated nostalgia, fun",
+    "prompt": "In a pixelated arcade voice, narrate Player {{PLAYER_NAME}}’s life as a victory screen: house = {{RESULT_HOUSE}}, ride = {{RESULT_RIDE}}, job = {{RESULT_JOB}}, salary = {{RESULT_SALARY}}, kids = {{RESULT_KIDS}}, spouse = {{RESULT_SPOUSE}}. Use retro gaming language like ‘Level up!’, ‘Boss fight!’ and treat each result like a power‑up. End with a high score."
+  },
+  {
+    "id": "mode06",
+    "title": "Future Me Diary",
+    "pov": "1st‑person from the future",
+    "tone": "Reflective, humorous, slightly wistful",
+    "prompt": "I’m you in the year 2035 writing back to myself. Describe how we ended up in a {{RESULT_HOUSE}}, with a {{RESULT_RIDE}}, and {{RESULT_KIDS}} kids thanks to our MASH results. Include how our {{RESULT_JOB}} and {{RESULT_SALARY}} changed our life and how we feel about {{RESULT_SPOUSE}}. Use reflective commentary, lessons learned, and humor."
+  },
+  {
+    "id": "mode07",
+    "title": "Time‑Travel Reporter",
+    "pov": "1st‑person future reporter",
+    "tone": "Mad scientist/gamer, excited, chaotic",
+    "prompt": "This is the year 2085; I'm a reporter from the future breaking the news to you about your life. Tell the story of {{PLAYER_NAME}} who ended up with a {{RESULT_HOUSE}}, drives a {{RESULT_RIDE}}, works as a {{RESULT_JOB}}, earns {{RESULT_SALARY}}, raising {{RESULT_KIDS}} kids, and married {{RESULT_SPOUSE}}. Use excited tone, chaotic events, and futuristic jargon."
+  },
+  {
+    "id": "mode08",
+    "title": "Movie Trailer Voice‑Over",
+    "pov": "3rd‑person cinematic narrator",
+    "tone": "Dramatic, hype, epic",
+    "prompt": "Write the script for a blockbuster trailer about {{PLAYER_NAME}}’s MASH fate. Start with 'In a world...' then describe the house ({{RESULT_HOUSE}}), ride ({{RESULT_RIDE}}), job ({{RESULT_JOB}}), salary ({{RESULT_SALARY}}), kids ({{RESULT_KIDS}}) and spouse ({{RESULT_SPOUSE}}) like high stakes. Use cinematic language, suspenseful pacing, and a dramatic tagline."
+  },
+  {
+    "id": "mode09",
+    "title": "Game Show Host",
+    "pov": "2nd‑person contestant & host",
+    "tone": "Energetic, playful, showbiz",
+    "prompt": "Welcome to MASHmania Live! You’re the contestant {{PLAYER_NAME}}. The host announces your prizes: house = {{RESULT_HOUSE}}, ride = {{RESULT_RIDE}}, job = {{RESULT_JOB}}, salary = {{RESULT_SALARY}}, kids = {{RESULT_KIDS}}, spouse = {{RESULT_SPOUSE}}. Write both the host’s announcements and your excited reactions. Use catchphrases, confetti, and audience cheers."
+  },
+  {
+    "id": "mode10",
+    "title": "News Flash",
+    "pov": "3rd‑person newsroom anchor",
+    "tone": "Urgent, witty, media‑saturated",
+    "prompt": "Breaking news: anchor {{PLAYER_NAME}} reports on the shocking life updates: they now live in a {{RESULT_HOUSE}}, drive a {{RESULT_RIDE}}, work as a {{RESULT_JOB}}, earn {{RESULT_SALARY}}, have {{RESULT_KIDS}} kids and married {{RESULT_SPOUSE}}. Write like a TV news script with quotes from sources and witty asides."
+  },
+  {
+    "id": "mode11",
+    "title": "Bestie Hype Speech",
+    "pov": "2nd‑person friend to friend",
+    "tone": "Warm, enthusiastic, supportive",
+    "prompt": "{{PLAYER_NAME}}, you’re delivering a heartfelt hype speech about your friend's future. Praise their {{RESULT_JOB}}, celebrate their {{RESULT_HOUSE}}, gush over their {{RESULT_RIDE}}, and hype up their relationship with {{RESULT_SPOUSE}}. Mention how many kids they’ll have ({{RESULT_KIDS}}) and their salary ({{RESULT_SALARY}}). Use inside jokes and lots of love."
+  },
+  {
+    "id": "mode12",
+    "title": "Red‑Carpet Royalty",
+    "pov": "3rd‑person glam commentator",
+    "tone": "Posh, fashionable, ultra‑confident",
+    "prompt": "You’re a fashion editor describing {{PLAYER_NAME}}'s life reveal like a red‑carpet look. Spotlight the {{RESULT_HOUSE}}, {{RESULT_RIDE}}, {{RESULT_JOB}}, {{RESULT_SALARY}}, and stylish spouse {{RESULT_SPOUSE}}. Use luxurious adjectives, glamour, brand drops, and a final verdict on whether they slay."
+  },
+  {
+    "id": "mode13",
+    "title": "Podcast Hot Takes",
+    "pov": "2‑part host & guest",
+    "tone": "Smart‑casual, witty, cultural commentary",
+    "prompt": "Write a podcast segment where the host interviews {{PLAYER_NAME}} about their MASH results: {{RESULT_HOUSE}}, {{RESULT_RIDE}}, {{RESULT_JOB}}, {{RESULT_SALARY}}, {{RESULT_KIDS}}, {{RESULT_SPOUSE}}. Include both host’s questions and guest’s cheeky answers. Keep it conversational and drop modern references."
+  },
+  {
+    "id": "mode14",
+    "title": "Bestie Roast",
+    "pov": "2nd‑person friend, roasting",
+    "tone": "Friendly trash‑talk, playful, savage",
+    "prompt": "{{PLAYER_NAME}}, you’re roasting your friend’s future. Take their MASH results (house {{RESULT_HOUSE}}, ride {{RESULT_RIDE}}, job {{RESULT_JOB}}, salary {{RESULT_SALARY}}, kids {{RESULT_KIDS}}, spouse {{RESULT_SPOUSE}}) and exaggerate them for maximum comedic effect. Be savage but loving. Use sarcasm and roasts."
+  },
+  {
+    "id": "mode15",
+    "title": "Paparazzi Blitz",
+    "pov": "3rd‑person gossip journalist",
+    "tone": "Snarky, flashy, over‑the‑top",
+    "prompt": "You’re a gossip columnist covering {{PLAYER_NAME}}’s scandalous future. Write an exclusive about their new {{RESULT_HOUSE}}, flashy {{RESULT_RIDE}}, surprising {{RESULT_JOB}}, {{RESULT_SALARY}}, {{RESULT_KIDS}} kids, and newly famous spouse {{RESULT_SPOUSE}}. Use dramatic headlines and gossip."
+  },
+  {
+    "id": "mode16",
+    "title": "Alien Anthropologist",
+    "pov": "3rd‑person alien observer",
+    "tone": "Detached, curious, quirky",
+    "prompt": "As an alien anthropologist from Planet Zog, write a field report on specimen {{PLAYER_NAME}}. Document their human ritual of acquiring a {{RESULT_HOUSE}}, {{RESULT_RIDE}}, {{RESULT_JOB}}, raising {{RESULT_KIDS}} offspring, earning {{RESULT_SALARY}}, and partnering with {{RESULT_SPOUSE}}. Use scientific language and quirky observations about human life."
+  },
+  {
+    "id": "mode17",
+    "title": "Frenemy's Gossip Column",
+    "pov": "3rd‑person frenemy columnist",
+    "tone": "Catty, petty, sarcastic",
+    "prompt": "Write a gossip column entry by a frenemy who secretly can’t stand {{PLAYER_NAME}}. They reveal the juicy details of their {{RESULT_HOUSE}}, {{RESULT_RIDE}}, {{RESULT_JOB}}, {{RESULT_SALARY}}, {{RESULT_KIDS}}, and spouse {{RESULT_SPOUSE}}. Be petty, snarky, and hilarious."
+  },
+  {
+    "id": "mode18",
+    "title": "TikTok Trendsetter",
+    "pov": "2nd‑person viral narrator",
+    "tone": "High‑energy, meme‑friendly, pop culture",
+    "prompt": "Write a viral TikTok caption and story for {{PLAYER_NAME}}’s MASH challenge reveal: house = {{RESULT_HOUSE}}, ride = {{RESULT_RIDE}}, job = {{RESULT_JOB}}, salary = {{RESULT_SALARY}}, kids = {{RESULT_KIDS}}, spouse = {{RESULT_SPOUSE}}. Use meme language, hashtags, emojis, and a playfully chaotic vibe."
+  },
+  {
+    "id": "mode19",
+    "title": "Startup Pitch",
+    "pov": "1st‑person founder pitching life outcome",
+    "tone": "Businessy, tech‑chic, playful entrepreneur vibe",
+    "prompt": "I’m {{PLAYER_NAME}}, founder of LifeTech Inc. Pitch my life path like a startup: house = {{RESULT_HOUSE}}, ride = {{RESULT_RIDE}}, job = {{RESULT_JOB}}, salary = {{RESULT_SALARY}}, kids = {{RESULT_KIDS}}, spouse = {{RESULT_SPOUSE}}. Use startup jargon, value propositions, growth metrics, and comedic flair."
+  },
+  {
+    "id": "mode20",
+    "title": "Podcast Interview",
+    "pov": "1st‑person host & guest",
+    "tone": "Conversational, intimate, light‑hearted",
+    "prompt": "Host: 'Welcome to MASH After Dark!' Our guest {{PLAYER_NAME}} just drew their MASH results: house {{RESULT_HOUSE}}, ride {{RESULT_RIDE}}, job {{RESULT_JOB}}, salary {{RESULT_SALARY}}, kids {{RESULT_KIDS}}, spouse {{RESULT_SPOUSE}}. Guest: answer the host’s questions about each result with humour and honesty. Keep it chatty and friendly."
+  },
+  {
+    "id": "mode21",
+    "title": "Reality TV Intro",
+    "pov": "3rd‑person reality show narrator",
+    "tone": "Dramatic, sensational, humorous",
+    "prompt": "Write the intro for a reality TV show about {{PLAYER_NAME}}. Announce their new {{RESULT_HOUSE}}, flashy {{RESULT_RIDE}}, surprising {{RESULT_JOB}}, jaw‑dropping {{RESULT_SALARY}}, outrageous {{RESULT_KIDS}} family, and spouse {{RESULT_SPOUSE}}. Use dramatic pauses, cliffhangers, and tongue‑in‑cheek commentary."
+  },
+  {
+    "id": "mode22",
+    "title": "Sitcom Cold Open",
+    "pov": "3rd‑person sitcom narrator",
+    "tone": "Comedic, quirky, light‑hearted",
+    "prompt": "Write the cold open of a sitcom where {{PLAYER_NAME}} navigates life with a {{RESULT_HOUSE}}, {{RESULT_RIDE}}, {{RESULT_JOB}}, {{RESULT_SALARY}}, {{RESULT_KIDS}} kids, and spouse {{RESULT_SPOUSE}}. Include a laugh track and a punchline at the end."
+  },
+  {
+    "id": "mode23",
+    "title": "Wedding Toast",
+    "pov": "1st‑person toast giver",
+    "tone": "Heartfelt, humorous, slightly tipsy",
+    "prompt": "Give a wedding toast for {{PLAYER_NAME}} and their spouse {{RESULT_SPOUSE}}. Mention their {{RESULT_HOUSE}}, {{RESULT_RIDE}}, {{RESULT_JOB}}, {{RESULT_SALARY}}, and {{RESULT_KIDS}} kids. Use sentimental anecdotes and playful jokes."
+  },
+  {
+    "id": "mode24",
+    "title": "Couples Therapy",
+    "pov": "Therapist mediator",
+    "tone": "Wry, candid, comedic",
+    "prompt": "Transcribe a couples therapy session where {{PLAYER_NAME}} and their spouse {{RESULT_SPOUSE}} discuss their MASH future: living in a {{RESULT_HOUSE}}, driving a {{RESULT_RIDE}}, managing {{RESULT_JOB}}, earning {{RESULT_SALARY}}, raising {{RESULT_KIDS}} kids. Include witty remarks from the therapist and candid moments."
+  },
+  {
+    "id": "mode25",
+    "title": "Business Press Release",
+    "pov": "3rd‑person PR professional",
+    "tone": "Formal, corporate, tongue‑in‑cheek",
+    "prompt": "Write an official press release announcing {{PLAYER_NAME}}’s new venture: their MASH life. Announce the acquisition of a {{RESULT_HOUSE}}, the launch of a {{RESULT_RIDE}}, their appointment as {{RESULT_JOB}}, compensation of {{RESULT_SALARY}}, family expansion to {{RESULT_KIDS}} kids, and partnership with {{RESULT_SPOUSE}}. Use corporate jargon and comedic seriousness."
+  }
+]

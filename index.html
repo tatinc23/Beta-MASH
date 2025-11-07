@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>90s Baby MASH AI</title>
+    <title>90s Baby M.A.S.H</title>
     <script src="https://cdn.tailwindcss.com"></script>
   <script type="importmap">
 {
@@ -16,6 +16,35 @@
   }
 }
 </script>
+<style>
+  @keyframes winner-pulse {
+    0%, 100% {
+      transform: scale(1.0);
+      box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px 8px rgba(52, 211, 153, 0);
+    }
+  }
+  .winner-animation {
+    animation: winner-pulse 2s ease-in-out infinite;
+  }
+  @keyframes reveal-number {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .animate-reveal {
+      animation: reveal-number 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes flicker-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .animate-flicker-pulse {
+    animation: flicker-pulse 1s ease-in-out infinite;
+  }
+</style>
 <link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-gray-900 text-white">

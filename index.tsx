@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 // Fix: Corrected the import path for App to be a relative path.

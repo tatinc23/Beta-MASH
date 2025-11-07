@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+
+// Fix: Removed duplicated file header which was causing syntax errors.
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MashResults } from '../types';
 import { CATEGORY_INFO } from '../constants';
 
@@ -8,221 +10,184 @@ interface Step4EliminationProps {
   onEliminationComplete: (results: MashResults) => void;
 }
 
-interface MashItem {
-  id: number;
-  category: string;
-  option: string;
-  eliminated: boolean;
-  winner: boolean;
-}
+// A more robust, pure function to calculate the entire elimination sequence.
+// It generates a step-by-step sequence for animation, including counts.
+const calculateEliminationSequence = (categories: { [key: string]: string[] }, magicNumber: number) => {
+    const sequence: { id: string, categoryKey: string, option: string, type: 'count' | 'eliminate' }[] = [];
+    const finalResults: MashResults = {};
+    const eliminatedIds: Set<string> = new Set();
+
+    // Create a flat list of all options with their original IDs.
+    const allOptions: { id: string, categoryKey: string, option: string }[] = Object.entries(categories).flatMap(([key, options]) =>
+        (options as string[]).map((option, index) => ({
+            id: `${key}-${index}`,
+            categoryKey: key,
+            option: option
+        }))
+    );
+    
+    const mutableCategoryCounts: { [key: string]: number } = {};
+    Object.entries(categories).forEach(([key, options]) => {
+        mutableCategoryCounts[key] = (options as string[]).length;
+    });
+
+    let currentIndex = -1;
+    const totalEliminationsNeeded = allOptions.length - Object.keys(categories).length;
+    let eliminationsDone = 0;
+
+    while (eliminationsDone < totalEliminationsNeeded) {
+        let count = 0;
+        
+        // Find the next available option to count towards.
+        while (count < magicNumber) {
+            currentIndex = (currentIndex + 1) % allOptions.length;
+            if (!eliminatedIds.has(allOptions[currentIndex].id)) {
+                const currentItem = allOptions[currentIndex];
+                sequence.push({ ...currentItem, type: 'count' });
+                count++;
+            }
+        }
+        
+        const itemToEliminate = allOptions[currentIndex];
+        
+        // A category is only solved when it has 1 item left. If we land on an item from a category that already has only 1 option, we skip it and continue.
+        if (mutableCategoryCounts[itemToEliminate.categoryKey] > 1) {
+            eliminatedIds.add(itemToEliminate.id);
+            eliminationsDone++;
+            mutableCategoryCounts[itemToEliminate.categoryKey]--;
+
+            // Change the last 'count' step in the sequence to an 'eliminate' step for the animation.
+            const lastCountIndex = sequence.length - 1;
+            if (lastCountIndex >= 0) {
+                sequence[lastCountIndex].type = 'eliminate';
+            }
+        }
+        // If the category is already solved, we do nothing and the loop continues, starting the count from the current position.
+    }
+
+    // Determine the final results from what's left.
+    for (const key of Object.keys(categories)) {
+        const remainingOption = allOptions.find(opt => opt.categoryKey === key && !eliminatedIds.has(opt.id));
+        if (remainingOption) {
+            finalResults[key] = remainingOption.option;
+        }
+    }
+    
+    return { sequence, finalResults };
+};
+
 
 const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNumber, onEliminationComplete }) => {
-  const initialItems = useMemo(() => {
-    let idCounter = 0;
-    const categoryOrder = Object.keys(CATEGORY_INFO).filter(c => categories[c]);
-    const customCategories = Object.keys(categories).filter(c => !CATEGORY_INFO[c]);
+    const { sequence, finalResults } = useMemo(() => calculateEliminationSequence(categories, magicNumber), [categories, magicNumber]);
 
-    return [...categoryOrder, ...customCategories].flatMap(category =>
-      (categories[category] as string[]).map(option => ({
-        id: idCounter++,
-        category,
-        option,
-        eliminated: false,
-        winner: false,
-      }))
-    );
-  }, [categories]);
+    const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
+    const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const [isComplete, setIsComplete] = useState(false);
+    const [animationIndex, setAnimationIndex] = useState(0);
+    const animationTimeoutRef = useRef<number>();
 
-  const [items, setItems] = useState<MashItem[]>(initialItems);
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
-  const isSkippedRef = useRef(false);
-  const currentIndexRef = useRef(-1);
-
-  useEffect(() => {
-    if (magicNumber === 0) return;
-
-    const runElimination = async () => {
-      let currentItems = [...initialItems];
-
-      while (true) {
-        if (isSkippedRef.current) return;
-
-        const remainingItems = currentItems.filter(i => !i.eliminated);
-        const remainingCategories = new Set(remainingItems.map(i => i.category));
-        if (remainingItems.length === remainingCategories.size) {
-            break;
+    useEffect(() => {
+        // Stop if animation is complete or if there's no sequence.
+        if (isComplete || !sequence || animationIndex >= sequence.length) {
+            if (sequence && sequence.length > 0) {
+                 setIsComplete(true);
+                 setHighlightedId(null);
+            }
+            return;
         }
 
-        for (let i = 0; i < magicNumber; i++) {
-          if (isSkippedRef.current) return;
-          
-          do {
-            currentIndexRef.current = (currentIndexRef.current + 1) % currentItems.length;
-          } while (currentItems[currentIndexRef.current].eliminated);
-          
-          setHighlightedId(currentItems[currentIndexRef.current].id);
-          await new Promise(res => setTimeout(res, 75));
-        }
+        const currentStep = sequence[animationIndex];
+        setHighlightedId(currentStep.id);
 
+        const isElimination = currentStep.type === 'eliminate';
+        // Speed up animation: 100ms for counting, 500ms for elimination.
+        const delay = isElimination ? 500 : 100;
+
+        animationTimeoutRef.current = window.setTimeout(() => {
+            if (isElimination) {
+                setEliminatedIds(prev => new Set(prev).add(currentStep.id));
+            }
+            // Move to the next step of the animation.
+            setAnimationIndex(prev => prev + 1);
+        }, delay);
+
+        return () => {
+            clearTimeout(animationTimeoutRef.current);
+        };
+    }, [animationIndex, sequence, isComplete]);
+    
+    const handleSkip = () => {
+        clearTimeout(animationTimeoutRef.current);
+        // Mark all items that would be eliminated as eliminated.
+        const allEliminated = new Set(sequence.filter(s => s.type === 'eliminate').map(s => s.id));
+        setEliminatedIds(allEliminated);
         setHighlightedId(null);
-        const itemToEliminate = currentItems[currentIndexRef.current];
-        
-        const remainingInCategory = currentItems.filter(
-            item => item.category === itemToEliminate.category && !item.eliminated
-        ).length;
-
-        if (remainingInCategory > 1) {
-          currentItems = currentItems.map(item =>
-            item.id === itemToEliminate.id ? { ...item, eliminated: true } : item
-          );
-          setItems(currentItems);
-          await new Promise(res => setTimeout(res, 400));
-        }
-      }
-      
-      if (isSkippedRef.current) return;
-
-      // Fix: Use a more robust method to set final winners to prevent state issues.
-      const finalWinnerIds = currentItems.filter(item => !item.eliminated).map(item => item.id);
-      setItems(prevItems => prevItems.map(item => ({
-        ...item,
-        // Ensure eliminated items from the animation are persisted
-        eliminated: !finalWinnerIds.includes(item.id),
-        winner: finalWinnerIds.includes(item.id),
-      })));
-      setIsComplete(true);
+        setIsComplete(true);
+        setAnimationIndex(sequence.length); // Prevent animation from continuing
     };
 
-    runElimination();
-
-    return () => {
-      isSkippedRef.current = true;
+    const handleSeeFuture = () => {
+        onEliminationComplete(finalResults);
     };
-  }, [initialItems, magicNumber]);
 
-
-  const getCategoryInfo = (categoryKey: string) => {
-    return CATEGORY_INFO[categoryKey] || { name: categoryKey, icon: '🌟' };
-  }
-
-  const handleSeeResults = () => {
-      const results: MashResults = {};
-      items.filter(i => i.winner).forEach(item => {
-        results[item.category] = item.option;
-      });
-      onEliminationComplete(results);
-  };
-  
-  const handleSkipElimination = () => {
-    if (isComplete) return;
-    isSkippedRef.current = true;
-
-    // Fix: Operate on the original, unmodified list to prevent errors from partially animated state.
-    let currentItems = [...initialItems];
-
-    while (true) {
-        const remainingItems = currentItems.filter(i => !i.eliminated);
-        const remainingCategories = new Set(remainingItems.map(i => i.category));
-        if (remainingItems.length === remainingCategories.size) {
-            break;
-        }
-
-        // Use a local counter instead of the ref to avoid side effects
-        let localCurrentIndex = currentIndexRef.current;
-        for (let i = 0; i < magicNumber; i++) {
-            do {
-                localCurrentIndex = (localCurrentIndex + 1) % currentItems.length;
-            } while (currentItems[localCurrentIndex].eliminated);
-        }
-        currentIndexRef.current = localCurrentIndex;
-
-
-        const itemToEliminate = currentItems[currentIndexRef.current];
-        const remainingInCategory = currentItems.filter(
-            item => item.category === itemToEliminate.category && !item.eliminated
-        ).length;
-
-        if (remainingInCategory > 1) {
-            currentItems = currentItems.map(item =>
-                item.id === itemToEliminate.id ? { ...item, eliminated: true } : item
-            );
-        }
-    }
-    const finalItems = currentItems.map(item => ({
-        ...item,
-        winner: !item.eliminated,
-    }));
-    setItems(finalItems);
-    setIsComplete(true);
-  };
-
-  const categoryOrder = useMemo(() => {
-    const standard = Object.keys(CATEGORY_INFO).filter(c => categories[c]);
-    const custom = Object.keys(categories).filter(c => !CATEGORY_INFO[c]);
-    return [...standard, ...custom];
-  }, [categories]);
-
-  const getItemClasses = (item: MashItem) => {
-    if (item.winner) {
-      return 'bg-green-500 scale-105 shadow-lg ring-2 ring-white';
-    }
-    if (highlightedId === item.id && !item.eliminated) {
-      return 'bg-pink-500/80 scale-110';
-    }
-    if (item.eliminated) {
-      return 'bg-red-500/50 text-gray-400 line-through';
-    }
-    return 'bg-white/10';
-  };
-
-  return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-white/20">
-      <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
-        <h2 className="text-3xl font-bold">Step 4: The Elimination! ⚡</h2>
-        {!isComplete && (
-          <button onClick={handleSkipElimination} className="bg-yellow-500/80 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg text-sm">
-              Ain't Nobody Got Time For That
-          </button>
-        )}
-      </div>
-      <p className="text-indigo-200 mb-6">Your magic number is: <span className="font-bold text-pink-400 text-2xl">{magicNumber}</span></p>
-
-      <div className="space-y-4">
-        {categoryOrder.map(category => {
-          const catInfo = getCategoryInfo(category);
-          return (
-          <div key={category}>
-            <h3 className="text-lg font-semibold mb-2 text-left">{catInfo.icon} {catInfo.name}</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {items.filter(item => item.category === category).map(item => (
-                <div
-                  key={item.id}
-                  className={`p-2 rounded-lg transition-all duration-200 text-center text-sm flex items-center justify-center min-h-[4rem] ${getItemClasses(item)}`}
-                >
-                  {item.option}
-                </div>
-              ))}
+    return (
+        <div className="w-full max-w-4xl mx-auto text-center flex flex-col h-full">
+            <div className="mb-4">
+                <h2 className="text-3xl font-bold">The Elimination! ⚡️</h2>
+                <p className="text-indigo-200">Your magic number is: <span className="font-bold text-2xl text-yellow-300">{magicNumber}</span></p>
             </div>
-          </div>
-        )})}
-      </div>
 
-      <div className="mt-8 h-12 flex items-center justify-center">
-        {!isComplete ? (
-           <div className="text-center">
-             <div className="inline-block w-8 h-8 border-4 border-t-pink-500 border-indigo-500 rounded-full animate-spin"></div>
-             <p className="mt-2 text-indigo-200 text-sm">The spirits are deciding...</p>
-           </div>
-        ) : (
-          <button onClick={handleSeeResults} className="w-full bg-gradient-to-r from-pink-500 via-yellow-400 to-cyan-400 hover:from-pink-600 hover:via-yellow-500 hover:to-cyan-500 text-black font-bold py-3 px-4 rounded-lg text-xl shadow-lg shadow-yellow-400/50 transform transition-all duration-300 hover:scale-105 animate-pulse">
-             See Your Future!
-          </button>
-        )}
-      </div>
+            <button
+                onClick={handleSkip}
+                className="mb-4 bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+                Ain't Nobody Got Time For That!
+            </button>
 
-    </div>
-  );
+            <div className="grid grid-cols-2 gap-2 flex-grow">
+                {Object.entries(categories).map(([key, options]) => (
+                    <div key={key} className="bg-black/20 p-2 rounded-lg flex flex-col">
+                        <h3 className="text-sm font-bold text-indigo-200 mb-2">{CATEGORY_INFO[key]?.icon} {CATEGORY_INFO[key]?.name}</h3>
+                        <div className="grid grid-cols-2 gap-1.5 flex-grow">
+                            {(options as string[]).map((option, index) => {
+                                const id = `${key}-${index}`;
+                                const isEliminated = eliminatedIds.has(id);
+                                const isWinner = isComplete && finalResults[key] === option;
+                                const isHighlighted = highlightedId === id;
+                                
+                                return (
+                                    <div
+                                        key={id}
+                                        className={`
+                                            transition-all duration-300 p-1.5 rounded-md text-xs flex items-center justify-center text-center
+                                            ${isWinner
+                                                ? 'bg-green-500/90 text-white font-extrabold winner-animation border-2 border-yellow-300 shadow-lg shadow-green-500/50 scale-105'
+                                                : isEliminated
+                                                    ? 'bg-red-500/80 text-white opacity-70' // Turn red on elimination
+                                                    : 'bg-white/10 text-white'
+                                            }
+                                            ${isHighlighted ? 'outline-2 outline outline-pink-400 scale-110 shadow-lg shadow-pink-400/50' : ''}
+                                        `}
+                                    >
+                                        {option}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {isComplete && (
+                <button
+                    onClick={handleSeeFuture}
+                    className="mt-4 w-full bg-gradient-to-r from-pink-500 via-yellow-400 to-cyan-400 text-black font-bold py-3 px-4 rounded-lg text-xl shadow-lg animate-pulse"
+                >
+                    See Your Future!
+                </button>
+            )}
+        </div>
+    );
 };
 
 export default Step4Elimination;

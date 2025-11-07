@@ -1,24 +1,35 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Fragment } from 'react';
+import { LibraryCategory } from '../types';
 
 interface LibraryModalProps {
   category: string;
   categoryKey: string;
-  library: { [key: string]: string[] | { [key: string]: string[] } };
+  library: LibraryCategory;
   onSelect: (categoryKey: string, selections: string[]) => void;
   onClose: () => void;
 }
 
 const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, library, onSelect, onClose }) => {
   const [selections, setSelections] = useState<string[]>([]);
-  const subCategories = useMemo(() => Object.keys(library), [library]);
-  const [openAccordion, setOpenAccordion] = useState<string | null>(subCategories[0] || null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const allOptions = useMemo(() => {
-    return subCategories.flatMap(catKey => library[catKey as keyof typeof library] as string[]);
-  }, [library, subCategories]);
+    const options: string[] = [];
+    const recurse = (obj: LibraryCategory) => {
+        Object.values(obj).forEach(value => {
+            if (Array.isArray(value)) {
+                options.push(...value);
+            } else {
+                recurse(value);
+            }
+        });
+    };
+    recurse(library);
+    return Array.from(new Set(options));
+  }, [library]);
 
   const filteredOptions = useMemo(() => {
+    if (!searchTerm) return [];
     return allOptions.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [searchTerm, allOptions]);
 
@@ -30,13 +41,13 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
       if (prev.length < 4) {
         return [...prev, option];
       }
-      return prev;
+      // If full, replace the last item
+      return [...prev.slice(0, 3), option];
     });
   };
 
   const handleConfirm = () => {
     if (selections.length > 0) {
-      // Pad with random selections if not full
       const finalSelections = [...selections];
       const remainingOptions = allOptions.filter(opt => !finalSelections.includes(opt));
       while (finalSelections.length < 4 && remainingOptions.length > 0) {
@@ -46,12 +57,12 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
       onSelect(categoryKey, finalSelections);
     }
   };
-
-  const renderOption = (option: string, index: number) => (
+  
+  const renderOption = (option: string) => (
     <div
-      key={`${option}-${index}`}
+      key={option}
       onClick={() => handleToggleSelection(option)}
-      className={`p-3 rounded-lg text-center cursor-pointer transition text-sm flex items-center justify-center min-h-[6rem] border-2 ${
+      className={`p-2 rounded-md text-center cursor-pointer transition text-sm flex items-center justify-center border-2 ${
         selections.includes(option)
           ? 'bg-green-500 border-white font-bold'
           : 'bg-white/10 border-transparent hover:border-pink-400'
@@ -60,17 +71,37 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
       {option}
     </div>
   );
+  
+  const renderLibrary = (lib: LibraryCategory) => {
+    return Object.entries(lib).map(([key, value]) => (
+        <details key={key} className="[&:not(:last-child)]:mb-2">
+            <summary className="bg-white/10 p-3 rounded-lg cursor-pointer font-semibold capitalize text-indigo-200 hover:bg-white/20 text-base">
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+            </summary>
+            <div className="p-2">
+                {Array.isArray(value) ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {value.map(renderOption)}
+                    </div>
+                ) : (
+                    <div className="pl-2 border-l-2 border-white/10">
+                        {renderLibrary(value)}
+                    </div>
+                )}
+            </div>
+        </details>
+    ));
+  };
+
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
       <div className="bg-gradient-to-br from-indigo-800 to-purple-900 rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] flex flex-col border border-white/20">
-        {/* Header */}
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-xl sm:text-2xl font-bold">📚 {category} Library</h2>
           <button onClick={onClose} className="text-2xl hover:text-pink-400 transition">&times;</button>
         </div>
 
-        {/* Search */}
         <div className="flex-shrink-0">
             <input
                 type="text"
@@ -81,40 +112,27 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
             />
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto flex-grow pr-2">
+        <div className="overflow-y-auto flex-grow pr-2 -mr-2">
           {searchTerm ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {filteredOptions.map(renderOption)}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {filteredOptions.length > 0 ? filteredOptions.map(renderOption) : <p className="col-span-full text-center text-indigo-300">No results found, dude.</p>}
             </div>
           ) : (
-            <div className="space-y-2">
-              {subCategories.map(catKey => (
-                <details key={catKey} open={openAccordion === catKey} onToggle={(e) => e.currentTarget.open && setOpenAccordion(catKey)}>
-                  <summary className="bg-white/10 p-3 rounded-lg cursor-pointer font-semibold capitalize text-indigo-200 hover:bg-white/20">
-                    {catKey.replace(/([A-Z])/g, ' $1').trim()}
-                  </summary>
-                  <div className="p-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {(library[catKey as keyof typeof library] as string[]).map(renderOption)}
-                  </div>
-                </details>
-              ))}
-            </div>
+            renderLibrary(library)
           )}
         </div>
         
-        {/* Footer */}
-        <div className="mt-4 flex-shrink-0">
-            <div className="min-h-[5rem] bg-black/20 rounded-lg p-2 mb-4">
+        <div className="mt-4 pt-4 border-t border-white/10 flex-shrink-0">
+            <div className="min-h-[4rem] bg-black/20 rounded-lg p-2 mb-4">
                 <p className="text-sm text-indigo-300 mb-1">Your Picks ({selections.length}/4):</p>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1">
+                    {selections.length === 0 && <p className="text-xs text-gray-400 pl-1">Tap options above to add them!</p>}
                     {selections.map(sel => (
-                        <div key={sel} className="bg-pink-500/80 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                        <div key={sel} className="bg-pink-500/80 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 animate-fade-in">
                             <span>{sel.substring(0, 20)}{sel.length > 20 ? '...' : ''}</span>
                             <button onClick={() => handleToggleSelection(sel)} className="font-bold">&times;</button>
                         </div>
                     ))}
-                    {selections.length === 0 && <p className="text-xs text-gray-400">Tap options above to add them!</p>}
                 </div>
             </div>
             <div className="flex gap-4">
@@ -122,9 +140,9 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
                 <button
                     onClick={handleConfirm}
                     disabled={selections.length === 0}
-                    className="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
                 >
-                    {selections.length < 4 && selections.length > 0 ? `Add ${selections.length} & Randomize Rest` : `Add ${selections.length} Selections`}
+                    {selections.length < 4 && selections.length > 0 ? `Add ${selections.length} & Randomize` : `Add ${selections.length} Selections`}
                 </button>
             </div>
         </div>

@@ -1,240 +1,277 @@
 import { GoogleGenAI, Modality } from "@google/genai";
-import { MashResults } from '../types';
-import { Players } from '../App';
-import { STORY_MODES } from '../constants';
+import { MashResults, StoryTone, Players, Player } from '../types';
+import { CATEGORY_INFO } from '../constants';
 
-// Helper function to convert a File to a base64 string
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = error => reject(error);
-  });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+
+const HARDCODED_STYLE_PROMPT = "The style is modern 3D animation, but rendered as a 2D portrait, reminiscent of a top-tier animation studio (like Pixar or Dreamworks). It should be expressive, vibrant, and full of personality with clean lines and expert shading.";
+
+export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<string> => {
+    if (!photo) throw new Error("A photo is required to generate an avatar.");
+
+    const prompt = `
+      **ROLE:** You are an expert character artist from a top-tier animation studio.
+      **TASK:** Create a single, high-quality, stylized cartoon headshot avatar based on the provided photo.
+      
+      **STYLE:** ${HARDCODED_STYLE_PROMPT} 
+      
+      **STYLE CONSISTENCY (ABSOLUTELY CRITICAL):** You will be asked to generate multiple avatars for different people in this game session. They must ALL share the exact same artistic style, as if drawn by the same artist for the same animated film. This is a non-negotiable rule. The lighting, line weight, shading, and overall feel must be uniform across all generated characters. DO NOT VARY THE STYLE.
+
+      **CRITICAL LIKENESS DIRECTIVE (ABSOLUTE #1 PRIORITY):** Achieve a 9/10 or higher likeness to the person in the photo. This is more important than any other instruction. Meticulously analyze their key facial features—eye shape and color, nose, mouth, jawline, and unique characteristics like moles, freckles, or specific hair styles—and replicate them with extreme accuracy within the defined art style. The final character MUST be immediately recognizable as the person in the photo.
+      
+      **OUTPUT:** Create a head-and-shoulders portrait with a simple, neutral background.
+    `.trim();
+
+    const imagePart = { inlineData: { data: photo.base64, mimeType: photo.mimeType } };
+    const textPart = { text: prompt };
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [imagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE] },
+    });
+
+    const firstPart = response.candidates?.[0]?.content?.parts?.[0];
+    if (firstPart && firstPart.inlineData) {
+        return firstPart.inlineData.data;
+    }
+    throw new Error("The AI failed to generate a headshot. Please try a different photo.");
 };
 
-const RELATIONSHIP_ROLES: { [key: string]: [string, string] } = {
-    'Besties': ['Bestie 1', 'Bestie 2'],
-    'Siblings': ['Older Sibling', 'Younger Sibling'],
-    'Dating': ['Partner 1', 'Partner 2'],
-    'Rivals': ['Rival 1', 'Rival 2'],
-    'Parent/Kid': ["Parent", "Kid"],
-};
+export const editHeadshotAvatar = async (
+    originalPhoto: Player['photo'],
+    currentAvatar: string,
+    editPrompt: string
+): Promise<string> => {
+    if (!originalPhoto) throw new Error("Original photo is required for editing.");
+    if (!currentAvatar) throw new Error("An existing avatar is required for editing.");
+    if (!editPrompt) throw new Error("An edit prompt is required.");
 
-const getPromptForMode = (modeId: string, results: MashResults, players: Players): string => {
-  const mode = STORY_MODES.find(m => m.id === modeId);
-  if (!mode) throw new Error("Invalid story mode selected");
+    const prompt = `
+      **ROLE:** You are an expert character artist and retoucher.
+      **TASK:** Modify an existing cartoon avatar based on a text instruction, while strictly preserving the person's likeness and the art style.
 
-  const p1Name = players.player1.name || (players.mode === 'friend' ? 'Your Friend' : 'Player 1');
-  const p2Name = players.player2?.name || 'Player 2';
-  
-  const subjects = {
-      self: p1Name,
-      friend: p2Name,
-      coop: `${p1Name} and ${p2Name}`
-  };
-  const playerName = subjects[players.mode] || 'You';
+      **INPUTS:**
+      1.  **Original Photo:** The primary source for the person's facial features. Likeness to this photo is the #1 priority.
+      2.  **Current Avatar:** The source for the artistic style. The output must match this style perfectly.
+      3.  **Edit Instruction:** The user's requested change.
 
-  const resultsString = Object.entries(results)
-      .map(([category, result]) => `- **${category}:** ${result}`)
-      .join('\n');
+      **STYLE:** ${HARDCODED_STYLE_PROMPT}
 
-  let toneInstructions = `Write a fun, cheeky, and over-the-top future prediction. Use tons of 90s slang (e.g., "as if!", "all that and a bag of chips", "da bomb", "word up", "booyah"). Keep it short and punchy (150-200 words). **Variety Guideline:** Don't overuse the same 90s clichés (like Tamagotchis) in every story. Mix it up unless the result is literally about that cliché.`;
+      **CRITICAL INSTRUCTIONS (MUST BE FOLLOWED):**
+      1.  **PRESERVE LIKENESS:** The modified avatar MUST still look exactly like the person in the original photo. Do not change their core facial structure.
+      2.  **PRESERVE STYLE:** The output MUST be in the identical art style as the "Current Avatar". Do not change lighting, shading, line work, or texture.
+      3.  **APPLY EDIT:** Apply the following modification based on the user's instruction: "${editPrompt}".
 
-  if (players.mode === 'friend' && players.friendModeStyle === 'naughty') {
-      toneInstructions = `This is a "naughty" or "roast" story for a friend. Be extra sassy, sarcastic, and lovingly make fun of their future. Exaggerate their results for maximum comedic effect. Focus on the *worst*, most hilarious possible interpretation of their future. Turn their dream house into a chaotic mess, their cool job into a slapstick comedy of errors. Be a savage, but a funny one. It's all in good fun!`;
-  }
+      **OUTPUT:** Generate a new head-and-shoulders portrait that incorporates the edit while following all other instructions.
+    `.trim();
 
-  let relationshipContext = '';
-  let playerRoles = '';
-  if (players.relationship && (players.mode === 'coop' || players.mode === 'friend')) {
-      const roles = RELATIONSHIP_ROLES[players.relationship];
-      if (roles) {
-          playerRoles = `\n**Player Roles:**\n- ${p1Name} is the ${players.mode === 'friend' ? 'storyteller' : roles[0]}.\n- ${p2Name} is the ${roles[1]}.`;
-      }
+    const photoPart = { inlineData: { data: originalPhoto.base64, mimeType: originalPhoto.mimeType } };
+    const avatarPart = { inlineData: { data: currentAvatar, mimeType: 'image/png' } };
+    const textPart = { text: prompt };
 
-      switch (players.relationship) {
-          case 'Besties': relationshipContext = 'Frame this as one bestie telling the other their wild future.'; break;
-          case 'Siblings': relationshipContext = 'Write this with a classic sibling rivalry tone - a mix of teasing and affection.'; break;
-          case 'Dating': relationshipContext = 'Write this like a super sweet, gushy love note about your future together.'; break;
-          case 'Rivals': relationshipContext = 'Frame this as a bitter rival begrudgingly admitting how awesome their future is.'; break;
-          case 'Parent/Kid': relationshipContext = `Write this as a proud parent (${p1Name}) telling their kid (${p2Name}) about the amazing life they have ahead.`; break;
-      }
-  }
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [photoPart, avatarPart, textPart] },
+        config: { responseModalities: [Modality.IMAGE] },
+    });
 
-  // Base prompt structure
-  let prompt = `
-    You are a 90s teen magazine columnist. Your task is to generate a creative story based on the M.A.S.H. results provided, using a specific point of view or style.
-
-    **Tone Guideline:** ${toneInstructions}
-    **Relationship Context:** ${relationshipContext}
-    ${playerRoles}
-    
-    **M.A.S.H. Results for ${playerName}:**
-    ${resultsString}
-
-    ---
-    
-    **Your Mission:** Write the story from the following perspective:
-    
-    **Mode: ${mode.title} (${mode.description})**
-  `;
-  
-  // Specific prompt adjustments per mode can go here
-  switch (modeId) {
-    case 'mode06': // Movie Trailer
-        prompt += `\nWrite the story in the style of an epic 90s movie trailer voiceover. Start with "In a world..." and make it dramatic!`;
-        break;
-    case 'mode10': // Bestie Roast
-        prompt += `\nWrite this as if ${p1Name} is roasting ${p2Name}. Make it funny and savage, but in a friendly way.`;
-        break;
-    // ... other specific mode instructions can be added here
-    default:
-        prompt += `\nNow, spill the tea! What's the 4-1-1 on their future from this point of view?`;
-        break;
-  }
-
-  return prompt;
+    const firstPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (firstPart && firstPart.inlineData) {
+        return firstPart.inlineData.data;
+    }
+    throw new Error("The AI failed to edit the avatar. Please try a different prompt.");
 };
 
 
-export const generateStory = async (results: MashResults, players: Players, modeId: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+function getToneDescription(tone: StoryTone): string {
+    switch (tone) {
+        case 'sassy': return 'The tone should be cheeky, witty, and a little sassy.';
+        case 'wholesome': return 'The tone should be sweet, heartwarming, and positive.';
+        case 'roasty': return 'The tone should be a hilarious, over-the-top roast of the results. Really lean into the comedic chaos.';
+        default: return 'The tone should be fun and entertaining.';
+    }
+}
+
+function getRelationshipFlavor(players: Players): string {
+    const p1 = players.player1.name;
+    const p2 = players.player2?.name;
+
+    // The main prompt now handles the core 3rd-person POV instruction.
+    // This function just adds relationship-specific flavor for the narrator.
+    if (players.mode === 'coop' && p2 && players.relationship) {
+        switch (players.relationship) {
+            case 'Besties': return `Capture the chaotic, fun-loving energy between two best friends, ${p1} and ${p2}.`;
+            case 'Siblings': return `Have a teasing, classic sibling rivalry tone when describing the future of ${p1} and ${p2}.`;
+            case 'Dating': return `Describe the sweet, romantic future ahead for the couple, ${p1} and ${p2}.`;
+            case 'Crush': return `Tell the story of ${p1} and their crush ${p2} with a sense of daydreaming, wish-fulfillment, and romantic comedy.`;
+            case 'Exes': return `Describe the hilariously awkward and ironic shared future of the two exes, ${p1} and ${p2}.`;
+            case 'Married': return `Portray the comfortable, loving, and established partnership of the married couple, ${p1} and ${p2}.`;
+            default: return `Describe the shared future of ${p1} and ${p2}.`;
+        }
+    }
     
-    const prompt = getPromptForMode(modeId, results, players);
+    // For solo and sabotage, no extra context is needed beyond what's in the main prompt.
+    return 'Focus on the individual and their unique journey.';
+}
+
+
+const getStorySubject = (players: Players): string => {
+    switch (players.mode) {
+        case 'solo': return `the future of ${players.player1.name}`;
+        case 'sabotage': return `the future of ${players.player2!.name}, as imagined by their friend ${players.player1.name}`;
+        case 'coop': return `the shared future of two people, ${players.player1.name} and ${players.player2!.name}`;
+    }
+}
+
+export const generateStory = async (results: MashResults, players: Players, tone: StoryTone): Promise<string> => {
+    const relationshipFlavor = getRelationshipFlavor(players);
+    const storySubject = getStorySubject(players);
+    
+    const resultsString = Object.entries(results)
+        .map(([key, value]) => `- ${CATEGORY_INFO[key]?.name || key}: ${value}`)
+        .join('\n');
+
+    const prompt = `
+        You are a super funny storyteller who writes hilarious, slightly immature, and goofy stories. Your job is to write a short, super fun story (exactly 2 short paragraphs) about ${storySubject}, based on their M.A.S.H. game results.
+
+        **Core Instructions:**
+        1.  **Reading Level (SUPER IMPORTANT):** Write using simple, everyday words. The story should be very easy to read, like for a 5th grader. Keep sentences short and clear. Avoid big or complicated words. The goal is easy, funny reading!
+        2.  **Humor:** Be as funny and silly as possible. Use your imagination to connect the M.A.S.H. results in the most ridiculous way. Think slapstick, funny situations, and goofy outcomes. Don't be afraid to be immature.
+        3.  **Point of View (CRITICAL):** Write from a third-person narrator's perspective. You're like a funny friend telling a story about them. Use their names, and words like "he", "she", and "they". Never use "you" or "I".
+        4.  **Weave a Narrative:** Don't just list the results. Create a cohesive story that connects them in an entertaining way.
+        5.  **Vibe:** The story should feel like a funny cartoon or a silly 90s kids' show. Weave in 1-2 clever 90s references that are easy to get.
+        6.  **Relationship Flavor:** ${relationshipFlavor}
+        7.  **Tone:** ${getToneDescription(tone)}
+        8.  **Output:** Respond with ONLY the story text, no titles or extra formatting.
+
+        **M.A.S.H. Results:**
+        ${resultsString}
+
+        Now, tell the silliest story you can think of!
+    `.trim();
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
-        config: {
-          temperature: 0.8 // A little more creative for story telling
-        }
     });
-
     return response.text;
 };
 
-export const generateCharacterPortrait = async (players: Players, results: MashResults, photos: { p1: File | null, p2: File | null }): Promise<string> => {
-    if (!photos.p1) throw new Error("Player 1 photo is required.");
-    if (players.mode === 'coop' && !photos.p2) throw new Error("Player 2 photo is required.");
+export const generateFortuneImage = async (
+    player1Avatar: string | null,
+    player2Avatar: string | null,
+    results: MashResults,
+    players: Players,
+): Promise<string> => {
+    const imageParts = [];
+    if (player1Avatar) imageParts.push({ inlineData: { data: player1Avatar, mimeType: 'image/png' } });
+    if (player2Avatar) imageParts.push({ inlineData: { data: player2Avatar, mimeType: 'image/png' } });
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-    const p1Base64 = await fileToBase64(photos.p1);
-    const imageParts = [{
-        inlineData: { mimeType: photos.p1.type, data: p1Base64 }
-    }];
-
-    let playerDescription = `a character that looks like the person in the first photo, named ${players.player1.name || 'Player 1'}`;
-    let spouseDescription = `Their spouse should be a 90s-style cartoon interpretation of '${results.Spouse}'.`;
-
-    if (players.mode === 'coop' && photos.p2) {
-        const p2Base64 = await fileToBase64(photos.p2);
-        imageParts.push({
-            inlineData: { mimeType: photos.p2.type, data: p2Base64 }
-        });
-        playerDescription = `two characters posing together. The first should look like the person in the first photo (${players.player1.name || 'Player 1'}). The second should look like the person in the second photo (${players.player2!.name || 'Player 2'}).`;
-        spouseDescription = ''; // Spouse is the other player
+    const characterDirectives = () => {
+        switch(players.mode) {
+            case 'solo':
+                return `The character in the scene MUST be 10/10 identical to the cartoon headshot avatar provided as input. This avatar is the reference for ${players.player1.name}.`;
+            case 'sabotage':
+                 return `The character in the scene MUST be 10/10 identical to the cartoon headshot avatar provided as input. This avatar is the reference for ${players.player2!.name}.`;
+            case 'coop':
+                return `The two characters in the scene MUST be 10/10 identical to the two cartoon headshot avatars provided as input. This is the single most important goal.
+                - **Image 1** is the reference for ${players.player1.name}.
+                - **Image 2** is the reference for ${players.player2!.name}.`;
+        }
     }
 
-    const naughtyModePrompt = players.mode === 'friend' && players.friendModeStyle === 'naughty' 
-        ? `
-        **NAUGHTY MODE ACTIVE - SABOTAGE DIRECTIVE:**
-        This is a "naughty" portrait meant to be funny and embarrassing for the friend. While keeping the character's likeness, introduce a humorous, chaotic, or silly element based on one of their MASH results. Pick one MASH result and make it comedically disastrous or absurd in the portrait. The vibe is 'loving roast'. The person from the photo should look stressed, embarrassed, or comically serious amidst the chaos.
-        ` 
-        : '';
+    const sceneBrief = () => {
+         const mainCharName = players.mode === 'sabotage' ? players.player2!.name : players.player1.name;
+         switch(players.mode) {
+            case 'solo':
+            case 'sabotage':
+                return `
+                - **Character:** ${mainCharName} is the focal point.
+                - **Spouse:** Their spouse is a 90s-style cartoon interpretation of '${results.Spouse}'. Include them in a fun, secondary way (e.g., in a framed photo, a thought bubble, or as a fun background character).
+                - **Setting:** A ${results.Housing} in ${results.City}.
+                - **Job:** ${mainCharName} is dressed for or doing an action related to their job as a "${results.Job}".
+                - **Vehicle:** Their ${results.Car} is visible.
+                - **Pet:** Their pet, a ${results.Pet}, is in the scene.
+                - **Kids:** They have ${results.Kids}. Represent this contextually (e.g., kids' toys, drawings).
+                - **Wealth:** Their wealth level of '${results.Wealth}' is shown through their lifestyle (e.g., lavish items for rich, humble setting for poor).
+                `;
+            case 'coop':
+                 // Dynamically build the scene brief from the co-op results
+                 const coopBrief = Object.entries(results)
+                    .map(([key, value]) => `- **${CATEGORY_INFO[key]?.name || key}:** Visually represent "${value}" in the scene.`)
+                    .join('\n');
+
+                 return `
+                - **Characters:** ${players.player1.name} and ${players.player2!.name} are together and are the main focus.
+                ${coopBrief}
+                 `;
+         }
+    }
+    
+    const sabotageNote = players.mode === 'sabotage'
+     ? `**SABOTAGE MODE ACTIVE:** This is a "roast" portrait meant to be a funny roast. Introduce a humorous, chaotic, or silly element based on one of their MASH results. Make it comedically disastrous or absurd in the portrait. The person from the photo should look stressed or comically serious amidst the chaos.`
+     : '';
 
     const prompt = `
-      **ROLE:** You are an expert 90s cartoon art director. Your job is to create a single, cohesive "Magic Future Portrait" that is packed with detail and personality.
-
-      **ART STYLE:** Create a vibrant, cool, 90s cartoon/animated movie style. Think bright colors, expressive characters, and a fun, nostalgic vibe. It should look like a high-quality animation cell, not a photo.
+      **ROLE:** You are an expert character artist and scene illustrator.
+      **TASK:** Create a single, cohesive, story-rich illustration of a M.A.S.H. future.
+      **STYLE:** ${HARDCODED_STYLE_PROMPT} The entire image must be a unified piece of art.
+      ${sabotageNote}
       
-      **CRITICAL LIKENESS DIRECTIVE:** Your absolute highest priority is achieving a strong likeness to the people in the reference photos. This is more important than any other instruction. Analyze their key facial features—eye shape, nose, mouth, and jawline—and replicate them accurately within the 90s cartoon art style. The final characters MUST be immediately recognizable as the people in the photos.
-
-      ${naughtyModePrompt}
-
-      ---
-      **SCENE BRIEF: The Perfect Future Portrait**
+      **CRITICAL LIKENESS DIRECTIVE (ABSOLUTE #1 PRIORITY):** ${characterDirectives()}
+      If there is a conflict between maintaining likeness and another instruction, ALWAYS prioritize likeness. Maintain their facial structure, features, and hair exactly. Do not alter their appearance.
       
-      **1. FOCAL POINT - THE CHARACTERS:**
-      - The absolute main focus is the characters. Create ${playerDescription}.
-      - ${spouseDescription}
-      - They should be in the **foreground**, posing for the camera like a cool, candid 90s magazine photoshoot.
-      - Their interaction should be positive and engaging (e.g., an arm around a shoulder, a shared laugh, looking happily at the camera).
+      **ANIMATION PREPARATION (IMPORTANT):** The character's(s') eyes must be open, clear, and well-defined. The eyelids should be visible and distinct. This is crucial as the image will be used in a follow-up step to create a blinking animation. Generating clear, open eyes is essential for the animation to work correctly.
 
-      **2. STAGING & LAYERING (M.A.S.H. ELEMENTS):**
-      - Arrange the other M.A.S.H. results to create a rich scene with depth.
-      - **Background:** The '${results.Housing}' should be clearly visible in the background.
-      - **Mid-ground:** Place the '${results.Ride}' and visual elements related to their job: '${results.Job}'.
-      - **Character Grouping:** Creatively and naturally integrate their kids: '${results.Kids}'.
-      - **Subtle Details:** Weave in a visual representation of their salary level: '${results.Salary}'.
+      **SCENE COMPOSITION & STORYTELLING:**
+      Create a single, dynamic scene. The character(s) should be the focal point, interacting with their environment in a way that tells a story.
+      
+      **SCENE BRIEF (Visually represent ALL of these elements):**
+      ${sceneBrief()}
 
-      **3. STAGING FOR ANIMATION (CRUCIAL!):**
-      - To prepare this image for a 'living photo' animation, you MUST deliberately include these elements:
-      - Give at least one character hair that is slightly blowing or has a few stray strands that can move.
-      - Add a subtle glint or twinkle to a metallic or glass surface (like the car, a window, or jewelry).
-      - Ensure the characters' eyes are open and clear, ready for a slow blink.
+      Bring this entire future to life in one stunning, story-rich illustration. The final image MUST be a vertical 9:16 aspect ratio.
+    `.trim();
 
-      **FINAL INSTRUCTIONS:** Combine all these elements into one single, amazing, detailed portrait. Do not create a collage. Create one beautiful scene. The final image must be a vertical 9:16 aspect ratio.
-    `;
-    
+    const textPart = { text: prompt };
+
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
-        contents: { parts: [...imageParts, { text: prompt }] },
-        config: {
-            responseModalities: [Modality.IMAGE],
-        },
+        contents: { parts: [...imageParts, textPart] },
+        config: { responseModalities: [Modality.IMAGE] },
     });
 
-    const imagePart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-    if (!imagePart?.inlineData?.data) {
-        throw new Error("Portrait generation failed to return an image.");
+    const firstPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (firstPart && firstPart.inlineData) {
+        return firstPart.inlineData.data;
     }
-    return imagePart.inlineData.data;
+    throw new Error("The AI failed to generate a portrait. Please try again.");
 };
 
-export const animatePortrait = async (portraitBase64: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-    const videoPrompt = `
-      Animate this portrait image to create a very short, 2-3 second, seamlessly looping 'living photo' or cinemagraph.
+export const createBlinkingAnimation = async (baseImageBase64: string): Promise<string> => {
+    const prompt = `
+      **ROLE:** You are an expert photo retoucher and digital animator.
+      **TASK:** Take the provided cartoon portrait and create a second version where the character(s) are blinking.
       
-      **Animation Instructions:**
-      - The motion must be subtle and high-quality.
-      - Make the character(s) slowly blink, share a gentle smile, or slightly shift their gaze.
-      - Add a simple, magical animation to one background element (e.g., a car headlight twinkles, a window glows, steam gently rises from a soda can, or hair sways slightly).
-      - Maintain the exact art style and character likeness from the original image.
-      - The output MUST be a silent video. Do not generate any audio.
-    `;
+      **CRITICAL INSTRUCTIONS (READ CAREFULLY):**
+      1.  **IDENTICAL IMAGE:** The new image you create must be 100% absolutely identical to the source image in every single way (style, lighting, color, pose, background, details, etc.).
+      2.  **ONLY CHANGE THE EYES:** The *only* change permitted is to close the character's (or characters') eyes in a natural, gentle blink.
+      3.  **MAINTAIN STYLE:** The style of the closed eyes must perfectly match the existing art style.
+      4.  **NO OTHER CHANGES:** Do not add, remove, or alter any other element in the image.
+    `.trim();
 
-    let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
-        prompt: videoPrompt,
-        image: {
-            imageBytes: portraitBase64,
-            mimeType: 'image/jpeg',
-        },
-        config: {
-            numberOfVideos: 1,
-            resolution: '720p',
-            aspectRatio: '9:16' // Matches portrait style
-        }
+    const imagePart = { inlineData: { data: baseImageBase64, mimeType: 'image/png' } };
+    const textPart = { text: prompt };
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [imagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE] },
     });
     
-    while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        const pollingAi = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-        try {
-            operation = await pollingAi.operations.getVideosOperation({ operation: operation });
-        } catch (e) {
-            console.error("Polling failed, retrying...", e);
-        }
+    const firstPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (firstPart && firstPart.inlineData) {
+        return firstPart.inlineData.data;
     }
-
-    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!downloadLink) {
-        throw new Error("Video animation failed or returned no URI.");
-    }
-    
-    return downloadLink;
+    throw new Error("The AI failed to create a blink frame. Please try again.");
 };

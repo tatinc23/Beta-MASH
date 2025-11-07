@@ -1,147 +1,171 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface Step3SpiralProps {
-  onSpiralComplete: (magicNumber: number) => void;
+  onSpiralComplete: (num: number) => void;
 }
 
 const Step3Spiral: React.FC<Step3SpiralProps> = ({ onSpiralComplete }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const pointsRef = useRef<{x: number, y: number}[]>([]);
-  const [isFinished, setIsFinished] = useState(false);
+  const [lineCount, setLineCount] = useState(0);
   const [revealedNumber, setRevealedNumber] = useState<number | null>(null);
+  const hue = useRef(0);
 
-  const calculateMagicNumber = () => {
-    const points = pointsRef.current;
-    if (points.length < 20) return 5;
-
-    const centerX = canvasRef.current!.width / 2;
-    const centerY = canvasRef.current!.height / 2;
-
-    const angles = points.map(p => Math.atan2(p.y - centerY, p.x - centerX));
-    
-    let totalRotation = 0;
-    for (let i = 1; i < angles.length; i++) {
-        let angleDiff = angles[i] - angles[i-1];
-        if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-        if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-        totalRotation += angleDiff;
-    }
-
-    const loops = Math.abs(Math.round(totalRotation / (2 * Math.PI)));
-    // Fix: Make the number reflect the user's drawing instead of clamping to a minimum of 4.
-    // Add 3 to the loops drawn for a good gameplay range (3 is the minimum if you just draw a line).
-    const finalNumber = 3 + loops;
-    return Math.min(12, finalNumber); // Cap at 12 to prevent super long eliminations.
-  };
-
-  const getCoordinates = (event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
+  const resizeCanvas = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-    return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
-    };
-  }
-
-  const startDrawing = (event: React.MouseEvent | React.TouchEvent) => {
-    if (isFinished) return;
-    const { x, y } = getCoordinates(event.nativeEvent);
-    const ctx = canvasRef.current?.getContext('2d');
-    if (ctx) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
+    if (canvas) {
+      const { width, height } = canvas.getBoundingClientRect();
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
     }
-    pointsRef.current = [{x, y}];
-    setIsDrawing(true);
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-    if (pointsRef.current.length > 20 && !isFinished) {
-      finish();
-    }
-  };
-
-  const draw = (event: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || isFinished) return;
-    const { x, y } = getCoordinates(event.nativeEvent);
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (ctx) {
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      pointsRef.current.push({x, y});
-    }
-  };
-  
-  const finish = () => {
-    setIsFinished(true);
-    const magicNumber = calculateMagicNumber();
-    
-    let count = 0;
-    const interval = setInterval(() => {
-        count++;
-        setRevealedNumber(count);
-        if (count >= magicNumber) {
-            clearInterval(interval);
-            setTimeout(() => onSpiralComplete(magicNumber), 1500);
-        }
-    }, 150);
   };
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const container = canvas.parentElement;
-    if (container) {
-      const size = Math.min(container.clientWidth, 400);
-      canvas.width = size;
-      canvas.height = size;
-    }
-
-    ctx.strokeStyle = '#f093fb';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = '#f093fb';
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, 8, 0, Math.PI * 2);
-    ctx.fill();
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    return () => window.removeEventListener('resize', resizeCanvas);
   }, []);
 
-  return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-white/20">
-      <h2 className="text-3xl font-bold mb-4">Step 3: Draw Your Spiral 🌀</h2>
-      <p className="text-indigo-200 mb-6">Draw a spiral from the center. When you stop, your fate will be sealed!</p>
-      
-      <canvas
-        ref={canvasRef}
-        className="touch-none bg-white/10 rounded-xl mx-auto cursor-crosshair border-2 border-white/20"
-        onMouseDown={startDrawing}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onMouseMove={draw}
-        onTouchStart={startDrawing}
-        onTouchEnd={stopDrawing}
-        onTouchMove={draw}
-      />
+  useEffect(() => {
+    if (revealedNumber !== null) {
+      const timeoutId = setTimeout(() => {
+        onSpiralComplete(revealedNumber);
+      }, 2500); // Wait 2.5 seconds before moving to the next step
+      return () => clearTimeout(timeoutId);
+    }
+  }, [revealedNumber, onSpiralComplete]);
 
-      {isFinished && (
-         <div className="mt-6 text-center">
-            <p className="text-2xl font-bold">Your Magic Number is...</p>
-            <p className="text-7xl font-bold text-pink-400 animate-bounce">{revealedNumber}</p>
-         </div>
-      )}
+
+  const getCoords = (event: MouseEvent | TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0, isValid: false };
+
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+
+    if (event instanceof MouseEvent) {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else if (event.touches && event.touches[0]) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      return { x: 0, y: 0, isValid: false };
+    }
+    
+    // Fix: Scale coordinates to match canvas resolution if CSS scales it.
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height),
+      isValid: true
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const { x, y, isValid } = getCoords(e.nativeEvent);
+    if (!isValid) return;
+
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      setIsDrawing(true);
+      setLineCount(1); // Reset on new spiral
+    }
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const { x, y, isValid } = getCoords(e.nativeEvent);
+    if (!isValid) return;
+
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) {
+      hue.current = (hue.current + 3) % 360;
+      ctx.strokeStyle = `hsl(${hue.current}, 100%, 60%)`;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      setLineCount(prev => prev + 1);
+    }
+  };
+
+  const stopDrawing = () => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) {
+      ctx.closePath();
+    }
+    setIsDrawing(false);
+  };
+
+  const handleComplete = () => {
+    const magicNumber = (lineCount % 8) + 3;
+    setRevealedNumber(magicNumber);
+  };
+  
+  const handleRedraw = () => {
+    const canvas = canvasRef.current;
+    if(canvas) {
+        const ctx = canvas.getContext('2d');
+        if(ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+    setLineCount(0);
+  };
+  
+  if (revealedNumber !== null) {
+    return (
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-white/20 text-center flex flex-col items-center justify-center min-h-[400px] animate-fade-in">
+            <h2 className="text-3xl font-bold text-yellow-300 mb-4">Your Magic Number Is...</h2>
+            <div className="animate-reveal text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-300 to-cyan-300">
+                {revealedNumber}
+            </div>
+            <p className="text-indigo-200 text-lg mt-4 opacity-0 animate-fade-in [animation-delay:800ms]">
+                This number will decide your fate!
+            </p>
+        </div>
+    );
+  }
+
+
+  return (
+    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-white/20 text-center flex flex-col items-center animate-fade-in">
+      <h2 className="text-3xl font-bold mb-4">Draw a Spiral!</h2>
+      <p className="text-indigo-200 mb-6 max-w-sm">Draw a spiral in one continuous motion. The number of lines will determine your fate! Don't think too hard about it...</p>
+      
+      <div className="w-full max-w-sm aspect-square bg-black/20 rounded-lg cursor-crosshair touch-none overflow-hidden">
+        <canvas
+            ref={canvasRef}
+            className="w-full h-full"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+        />
+      </div>
+
+      <div className="mt-6 w-full max-w-sm flex flex-col sm:flex-row gap-4">
+        <button
+            onClick={handleRedraw}
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors"
+          >
+            Re-draw
+        </button>
+        <button
+          onClick={handleComplete}
+          disabled={lineCount < 10}
+          className="flex-1 bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-bold py-3 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Done! Reveal my Magic Number
+        </button>
+      </div>
     </div>
   );
 };

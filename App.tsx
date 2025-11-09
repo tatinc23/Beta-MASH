@@ -178,7 +178,7 @@ const App: React.FC = () => {
         setStep('MODE_SELECTION');
     };
 
-    const handleModeSelect = (mode: 'solo' | 'sabotage' | 'coop') => {
+    const handleModeSelect = (mode: 'solo' | 'coop') => {
         const basePlayer: Player = { name: '' };
         setPlayers({
             mode,
@@ -192,7 +192,6 @@ const App: React.FC = () => {
     const handlePlayerSetupComplete = async (finalPlayers: Players) => {
         const needsAvatarGeneration = 
             (finalPlayers.mode === 'solo' && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) ||
-            (finalPlayers.mode === 'sabotage' && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory) ||
             (finalPlayers.mode === 'coop' && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) ||
             (finalPlayers.mode === 'coop' && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory);
 
@@ -209,11 +208,11 @@ const App: React.FC = () => {
              if (DEV_MODE) {
                 // --- DEV MODE: Bypass AI with placeholder ---
                 const mockAvatars: { p1: string | null; p2: string | null } = { p1: null, p2: null };
-                const p1NeedsGen = finalPlayers.mode !== 'sabotage' && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory;
-                const p2NeedsGen = finalPlayers.mode !== 'solo' && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory;
+                const p1NeedsGen = finalPlayers.mode === 'solo' || finalPlayers.mode === 'coop';
+                const p2NeedsGen = finalPlayers.mode === 'coop';
 
-                if (p1NeedsGen) mockAvatars.p1 = PLACEHOLDER_AVATAR;
-                if (p2NeedsGen) mockAvatars.p2 = PLACEHOLDER_AVATAR;
+                if (p1NeedsGen && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) mockAvatars.p1 = PLACEHOLDER_AVATAR;
+                if (p2NeedsGen && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory) mockAvatars.p2 = PLACEHOLDER_AVATAR;
                 
                 await new Promise(resolve => setTimeout(resolve, DEV_MODE_DELAY)); // Simulate network
                 
@@ -227,8 +226,8 @@ const App: React.FC = () => {
 
             } else {
                 // --- REAL AI GENERATION ---
-                const p1NeedsGen = finalPlayers.mode !== 'sabotage' && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory;
-                const p2NeedsGen = finalPlayers.mode !== 'solo' && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory;
+                const p1NeedsGen = (finalPlayers.mode === 'solo' || finalPlayers.mode === 'coop') && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory;
+                const p2NeedsGen = finalPlayers.mode === 'coop' && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory;
 
                 const p1Promise = p1NeedsGen ? generateHeadshotAvatar(finalPlayers.player1.photo!) : Promise.resolve(null);
                 const p2Promise = p2NeedsGen ? generateHeadshotAvatar(finalPlayers.player2!.photo!) : Promise.resolve(null);
@@ -312,21 +311,11 @@ const App: React.FC = () => {
 
 
     const handleCategoriesSubmit = (submittedCategories: { [key: string]: string[] }) => {
-        if (players?.mode === 'sabotage') {
-             const finalResults: MashResults = {};
-             for (const key in submittedCategories) {
-                 finalResults[key] = submittedCategories[key][0]; // Take the single selected option
-             }
-             setResults(finalResults);
-             setShowAllResults(true); // Skip slideshow
-             setStep('RESULTS_REVEAL');
+        setCategories(submittedCategories);
+        if (players?.mode === 'coop') {
+            setStep('RPS');
         } else {
-            setCategories(submittedCategories);
-            if (players?.mode === 'coop') {
-                setStep('RPS');
-            } else {
-                setStep('SPIRAL'); // Skip RPS for solo
-            }
+            setStep('SPIRAL'); // Skip RPS for solo
         }
     };
 
@@ -355,8 +344,7 @@ const App: React.FC = () => {
                 await new Promise(resolve => setTimeout(resolve, DEV_MODE_DELAY));
                 setStory('This is a super cool story about your M.A.S.H. future! It was totally tubular.');
             } else {
-                const tone = players.mode === 'sabotage' ? 'roasty' : storyTone;
-                const newStory = await generateStory(results, players, tone);
+                const newStory = await generateStory(results, players, storyTone);
                 setStory(newStory);
             }
             setStep('STORY_REVEAL');
@@ -386,8 +374,6 @@ const App: React.FC = () => {
                      image = await generateFortuneImage(p1Avatar, p2Avatar, results, players);
                 } else if (players.mode === 'solo' && p1Avatar) {
                      image = await generateFortuneImage(p1Avatar, null, results, players);
-                } else if (players.mode === 'sabotage' && p2Avatar) {
-                     image = await generateFortuneImage(null, p2Avatar, results, players);
                 }
                 
                 if (image) {

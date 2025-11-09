@@ -96,9 +96,6 @@ function getToneDescription(tone: StoryTone): string {
 function getRelationshipFlavor(players: Players): string {
     const p1 = players.player1.name;
     const p2 = players.player2?.name;
-
-    // The main prompt now handles the core 3rd-person POV instruction.
-    // This function just adds relationship-specific flavor for the narrator.
     if (players.mode === 'coop' && p2 && players.relationship) {
         switch (players.relationship) {
             case 'Besties': return `Capture the chaotic, fun-loving energy between two best friends, ${p1} and ${p2}.`;
@@ -110,11 +107,8 @@ function getRelationshipFlavor(players: Players): string {
             default: return `Describe the shared future of ${p1} and ${p2}.`;
         }
     }
-    
-    // For solo and sabotage, no extra context is needed beyond what's in the main prompt.
     return 'Focus on the individual and their unique journey.';
 }
-
 
 const getStorySubject = (players: Players): string => {
     switch (players.mode) {
@@ -124,37 +118,62 @@ const getStorySubject = (players: Players): string => {
     }
 }
 
+const getPlayerInfoForPrompt = (players: Players): string => {
+    const { player1, player2, mode } = players;
+    let info = '';
+
+    const p1Info = player1.name;
+    
+    if (mode === 'solo') {
+        info += `Player: ${p1Info}.`;
+    }
+    
+    if (mode === 'coop' && player2) {
+        const p2Info = player2.name;
+        info += `Players: ${p1Info} and ${p2Info}.`;
+    }
+
+    if (mode === 'sabotage' && player2) {
+        const p2Info = player2.name;
+        info += `This story is imagined by ${p1Info} for their friend, ${p2Info}.`;
+    }
+
+    return info;
+}
+
+
 export const generateStory = async (results: MashResults, players: Players, tone: StoryTone): Promise<string> => {
     const relationshipFlavor = getRelationshipFlavor(players);
     const storySubject = getStorySubject(players);
-    
+    const playerInfo = getPlayerInfoForPrompt(players);
     const resultsString = Object.entries(results)
         .map(([key, value]) => `- ${CATEGORY_INFO[key]?.name || key}: ${value}`)
         .join('\n');
 
     const prompt = `
-        You are a super funny storyteller who writes hilarious, slightly immature, and goofy stories. Your job is to write a short, super fun story (exactly 2 short paragraphs) about ${storySubject}, based on their M.A.S.H. game results.
+        You are a super funny, slightly immature storyteller creating a M.A.S.H. story.
 
         **Core Instructions:**
-        1.  **Reading Level (SUPER IMPORTANT):** Write using simple, everyday words. The story should be very easy to read, like for a 5th grader. Keep sentences short and clear. Avoid big or complicated words. The goal is easy, funny reading!
-        2.  **Humor:** Be as funny and silly as possible. Use your imagination to connect the M.A.S.H. results in the most ridiculous way. Think slapstick, funny situations, and goofy outcomes. Don't be afraid to be immature.
-        3.  **Point of View (CRITICAL):** Write from a third-person narrator's perspective. You're like a funny friend telling a story about them. Use their names, and words like "he", "she", and "they". Never use "you" or "I".
-        4.  **Weave a Narrative:** Don't just list the results. Create a cohesive story that connects them in an entertaining way.
-        5.  **Vibe:** The story should feel like a funny cartoon or a silly 90s kids' show. Weave in 1-2 clever 90s references that are easy to get.
+        1.  **Reading Level (SUPER IMPORTANT):** Use simple, everyday words. Keep sentences short. Aim for a 5th-grade reading level.
+        2.  **Humor:** Be as funny and silly as possible. Connect the M.A.S.H. results in ridiculous ways.
+        3.  **Point of View (CRITICAL):** Use a third-person perspective. Use their names and gender-neutral pronouns (they/them) when referring to the players. Never use "you" or "I."
+        4.  **Length:** Write 3-4 short, funny paragraphs.
+        5.  **Vibe:** Funny cartoon, silly 90s kids' show. Include 2-3 easy 90s references.
         6.  **Relationship Flavor:** ${relationshipFlavor}
         7.  **Tone:** ${getToneDescription(tone)}
-        8.  **Output:** Respond with ONLY the story text, no titles or extra formatting.
 
-        **M.A.S.H. Results:**
+        **Story Context:** This story is about ${storySubject}.
+        **Player Info:** ${playerInfo}
+        
+        **M.A.S.H. Results to include:**
         ${resultsString}
-
-        Now, tell the silliest story you can think of!
     `.trim();
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
     });
+
     return response.text;
 };
 
@@ -246,32 +265,4 @@ export const generateFortuneImage = async (
         return firstPart.inlineData.data;
     }
     throw new Error("The AI failed to generate a portrait. Please try again.");
-};
-
-export const createBlinkingAnimation = async (baseImageBase64: string): Promise<string> => {
-    const prompt = `
-      **ROLE:** You are an expert photo retoucher and digital animator.
-      **TASK:** Take the provided cartoon portrait and create a second version where the character(s) are blinking.
-      
-      **CRITICAL INSTRUCTIONS (READ CAREFULLY):**
-      1.  **IDENTICAL IMAGE:** The new image you create must be 100% absolutely identical to the source image in every single way (style, lighting, color, pose, background, details, etc.).
-      2.  **ONLY CHANGE THE EYES:** The *only* change permitted is to close the character's (or characters') eyes in a natural, gentle blink.
-      3.  **MAINTAIN STYLE:** The style of the closed eyes must perfectly match the existing art style.
-      4.  **NO OTHER CHANGES:** Do not add, remove, or alter any other element in the image.
-    `.trim();
-
-    const imagePart = { inlineData: { data: baseImageBase64, mimeType: 'image/png' } };
-    const textPart = { text: prompt };
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts: [imagePart, textPart] },
-        config: { responseModalities: [Modality.IMAGE] },
-    });
-    
-    const firstPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-    if (firstPart && firstPart.inlineData) {
-        return firstPart.inlineData.data;
-    }
-    throw new Error("The AI failed to create a blink frame. Please try again.");
 };

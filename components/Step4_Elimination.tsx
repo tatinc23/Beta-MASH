@@ -1,5 +1,3 @@
-
-// Fix: Removed duplicated file header which was causing syntax errors.
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MashResults } from '../types';
 import { CATEGORY_INFO } from '../constants';
@@ -80,11 +78,12 @@ const calculateEliminationSequence = (categories: { [key: string]: string[] }, m
 const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNumber, onEliminationComplete }) => {
     const { sequence, finalResults } = useMemo(() => calculateEliminationSequence(categories, magicNumber), [categories, magicNumber]);
 
-    const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
+    const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(() => new Set());
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
     const [isComplete, setIsComplete] = useState(false);
     const [animationIndex, setAnimationIndex] = useState(0);
-    const animationTimeoutRef = useRef<number>();
+    // FIX: Explicitly initialize useRef with null to avoid ambiguity with the no-argument overload, which may confuse some build tools.
+    const animationTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         // Stop if animation is complete or if there's no sequence.
@@ -112,12 +111,16 @@ const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNu
         }, delay);
 
         return () => {
-            clearTimeout(animationTimeoutRef.current);
+            if (animationTimeoutRef.current) {
+                clearTimeout(animationTimeoutRef.current);
+            }
         };
     }, [animationIndex, sequence, isComplete]);
     
     const handleSkip = () => {
-        clearTimeout(animationTimeoutRef.current);
+        if (animationTimeoutRef.current) {
+            clearTimeout(animationTimeoutRef.current);
+        }
         // Mark all items that would be eliminated as eliminated.
         const allEliminated = new Set(sequence.filter(s => s.type === 'eliminate').map(s => s.id));
         setEliminatedIds(allEliminated);
@@ -158,16 +161,11 @@ const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNu
                                 return (
                                     <div
                                         key={id}
-                                        className={`
-                                            transition-all duration-300 p-1.5 rounded-md text-xs flex items-center justify-center text-center
-                                            ${isWinner
-                                                ? 'bg-green-500/90 text-white font-extrabold winner-animation border-2 border-yellow-300 shadow-lg shadow-green-500/50 scale-105'
-                                                : isEliminated
-                                                    ? 'bg-red-500/80 text-white opacity-70' // Turn red on elimination
-                                                    : 'bg-white/10 text-white'
-                                            }
-                                            ${isHighlighted ? 'outline-2 outline outline-pink-400 scale-110 shadow-lg shadow-pink-400/50' : ''}
-                                        `}
+                                        className={`p-1.5 rounded-md text-center text-xs break-words flex items-center justify-center
+                                            ${isEliminated ? 'bg-red-700/80 text-gray-400' : 'bg-white/5'} 
+                                            ${isWinner ? 'bg-green-500/90 text-white font-extrabold winner-animation border-2 border-yellow-300 shadow-lg shadow-green-500/50 scale-105' : ''}
+                                            ${isHighlighted ? 'bg-yellow-400 text-black scale-110 shadow-xl' : ''}`
+                                        }
                                     >
                                         {option}
                                     </div>
@@ -179,12 +177,14 @@ const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNu
             </div>
 
             {isComplete && (
-                <button
-                    onClick={handleSeeFuture}
-                    className="mt-4 w-full bg-gradient-to-r from-pink-500 via-yellow-400 to-cyan-400 text-black font-bold py-3 px-4 rounded-lg text-xl shadow-lg animate-pulse"
-                >
-                    See Your Future!
-                </button>
+                <div className="mt-6">
+                    <button
+                        onClick={handleSeeFuture}
+                        className="w-full max-w-sm mx-auto bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold py-3 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-300 hover:scale-105"
+                    >
+                        See My Future!
+                    </button>
+                </div>
             )}
         </div>
     );

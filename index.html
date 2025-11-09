@@ -8,11 +8,12 @@
   <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@19.2.0/client",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "uuid": "https://aistudiocdn.com/uuid@^13.0.0"
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
   }
 }
 </script>
@@ -43,6 +44,13 @@
   }
   .animate-flicker-pulse {
     animation: flicker-pulse 1s ease-in-out infinite;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
   }
 </style>
 <link rel="stylesheet" href="/index.css">

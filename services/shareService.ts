@@ -48,18 +48,4 @@ export const handleShare = async (
       console.error('Error using Web Share API:', error);
       logAnalytics('share_native_error', { error });
       // If the user cancels the share, we don't open the modal.
-      if ((error as DOMException).name !== 'AbortError') {
-         openModalFallback();
-      }
-      return false; // Indicate failure or cancellation
-    }
-  } else {
-    // Fallback to the branded modal on desktop or unsupported browsers
-    openModalFallback();
-    logAnalytics('share_modal_opened', { platform: 'modal' });
-    // In the fallback, we'll assume opening the modal is the trigger for challenge entry.
-    const entryId = uuidv4();
-    submitToChallenge(entryId);
-    return true;
-  }
-};
+      if ((error as DOMException).name !== '

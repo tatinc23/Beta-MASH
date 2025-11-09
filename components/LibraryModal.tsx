@@ -4,7 +4,7 @@ import { LibraryCategory } from '../types';
 interface LibraryModalProps {
   category: string;
   categoryKey: string;
-  library: LibraryCategory;
+  library: LibraryCategory | string[];
   onSelect: (categoryKey: string, selections: string[]) => void;
   onClose: () => void;
 }
@@ -15,7 +15,11 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
 
   const allOptions = useMemo(() => {
     const options: string[] = [];
-    const recurse = (obj: LibraryCategory) => {
+    const recurse = (obj: LibraryCategory | string[]) => {
+        if (Array.isArray(obj)) {
+            options.push(...obj);
+            return;
+        }
         Object.values(obj).forEach(value => {
             if (Array.isArray(value)) {
                 options.push(...value);
@@ -72,22 +76,24 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
     </div>
   );
   
-  const renderLibrary = (lib: LibraryCategory) => {
+  const renderLibrary = (lib: LibraryCategory | string[]) => {
+    if (Array.isArray(lib)) {
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {lib.map(renderOption)}
+            </div>
+        );
+    }
+
     return Object.entries(lib).map(([key, value]) => (
         <details key={key} className="[&:not(:last-child)]:mb-2">
             <summary className="bg-white/10 p-3 rounded-lg cursor-pointer font-semibold capitalize text-indigo-200 hover:bg-white/20 text-base">
                 {key.replace(/([A-Z])/g, ' $1').trim()}
             </summary>
             <div className="p-2">
-                {Array.isArray(value) ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {value.map(renderOption)}
-                    </div>
-                ) : (
-                    <div className="pl-2 border-l-2 border-white/10">
-                        {renderLibrary(value)}
-                    </div>
-                )}
+                <div className="pl-2 border-l-2 border-white/10">
+                    {renderLibrary(value)}
+                </div>
             </div>
         </details>
     ));

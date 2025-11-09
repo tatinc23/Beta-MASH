@@ -1,5 +1,5 @@
 {
-  "name": "90s-baby-m.a.s.h",
+  "name": "copy9-0s-baby-m.a.s.h",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
     "@google/genai": "^1.28.0",
     "react": "^19.2.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

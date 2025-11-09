@@ -55,7 +55,7 @@ const Step3Spiral: React.FC<Step3SpiralProps> = ({ onSpiralComplete }) => {
       return { x: 0, y: 0, isValid: false };
     }
     
-    // Fix: Scale coordinates to match canvas resolution if CSS scales it.
+    // Scale coordinates to match canvas resolution if CSS scales it.
     return {
       x: (clientX - rect.left) * (canvas.width / rect.width),
       y: (clientY - rect.top) * (canvas.height / rect.height),

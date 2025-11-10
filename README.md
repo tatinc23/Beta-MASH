@@ -18,3 +18,12 @@ View your app in AI Studio: https://ai.studio/apps/drive/1nr-rvj0wV-74Rz0EukUwDi
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Media assets
+
+Drop the large local files (not committed) into `public/assets/` before running:
+
+- `dial-up.mp3` for the faux modem sound (`/assets/dial-up.mp3`)
+- `rick-roll.mp4` for the prank video (`/assets/rick-roll.mp4`)
+
+The code already references these URLs, so keeping the filenames consistent is all you need.

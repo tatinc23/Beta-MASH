@@ -1,7 +1,7 @@
 import { LibraryCategory, StoryMode, SharePlatform, CategoryConfig } from "./types";
 
 export const DIAL_UP_SOUND_DATA_URL = '/assets/dial-up.mp3';
-export const RICK_ROLL_IMAGE_URL = '/assets/rick-roll.jpg';
+export const RICK_ROLL_VIDEO_URL = '/assets/rick-roll.mp4';
 
 // This is a placeholder for when a user doesn't provide a photo for avatar generation.
 // It's a simple, generic silhouette.

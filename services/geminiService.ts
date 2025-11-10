@@ -2,7 +2,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { MashResults, StoryTone, Players, Player } from '../types';
 import { CATEGORY_INFO } from '../constants';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY! });
 
 export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<string> => {
     if (!photo) throw new Error("A photo is required to generate an avatar.");

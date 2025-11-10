@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Players, MashResults, StoryTone, Player, CategoryConfig } from './types';
 import { generateHeadshotAvatar, editHeadshotAvatar, generateStory, generateFortuneImage } from './services/geminiService';
-import { STORY_MODES, DEFAULT_CATEGORIES, PLACEHOLDER_AVATAR, DIAL_UP_SOUND_DATA_URL } from './constants';
+import { DEFAULT_CATEGORIES, PLACEHOLDER_AVATAR, DIAL_UP_SOUND_DATA_URL, PLACEHOLDER_AVATAR_2 } from './constants';
 import { COOP_CATEGORIES } from './coop_categories';
 
 import WelcomeScreen from './components/WelcomeScreen';
@@ -35,9 +35,6 @@ const DEV_MODE = false;
 const ENABLE_FEEDBACK = true;
 
 const DEV_MODE_DELAY = 300; // ms
-
-const SAVED_AVATARS_KEY = 'mash_saved_avatars';
-
 
 // --- Reusable UI Components ---
 const LoadingScreen: React.FC<{ text: string, showDialUp?: boolean }> = ({ text, showDialUp = false }) => {
@@ -95,23 +92,6 @@ const App: React.FC = () => {
     const [isMuted, setIsMuted] = useState(false);
     const [editingPlayerKey, setEditingPlayerKey] = useState<'player1' | 'player2' | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const [savedAvatars, setSavedAvatars] = useState<string[]>(() => {
-        try {
-            const items = window.localStorage.getItem(SAVED_AVATARS_KEY);
-            return items ? JSON.parse(items) : [];
-        } catch (error) {
-            console.error("Failed to parse saved avatars:", error);
-            return [];
-        }
-    });
-
-    useEffect(() => {
-        try {
-            window.localStorage.setItem(SAVED_AVATARS_KEY, JSON.stringify(savedAvatars));
-        } catch (error) {
-            console.error("Failed to save avatars:", error);
-        }
-    }, [savedAvatars]);
 
      // Sound Effects Logic
     useEffect(() => {
@@ -120,7 +100,7 @@ const App: React.FC = () => {
         setIsMuted(initialMute);
 
         // Create a single Audio object instance and reuse it
-        const audio = new Audio(DIAL_UP_SOUND_DATA_URL); // Use the embedded data URL
+        const audio = new Audio(DIAL_UP_SOUND_DATA_URL); 
         audio.loop = true;
         audio.muted = initialMute;
         audioRef.current = audio;
@@ -145,7 +125,14 @@ const App: React.FC = () => {
 
         if (audio) {
             if (shouldPlaySound && !audio.muted) {
-                audio.play().catch(e => console.error("Audio play failed:", e));
+                // The `play` method returns a promise which can be rejected if the user hasn't interacted with the page yet.
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        // We log the error but don't show it to the user, as it's often a browser policy issue.
+                        console.error("Audio play failed:", e)
+                    });
+                }
             } else {
                 audio.pause();
                 audio.currentTime = 0;
@@ -212,7 +199,7 @@ const App: React.FC = () => {
                 const p2NeedsGen = finalPlayers.mode === 'coop';
 
                 if (p1NeedsGen && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) mockAvatars.p1 = PLACEHOLDER_AVATAR;
-                if (p2NeedsGen && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory) mockAvatars.p2 = PLACEHOLDER_AVATAR;
+                if (p2NeedsGen && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory) mockAvatars.p2 = PLACEHOLDER_AVATAR_2;
                 
                 await new Promise(resolve => setTimeout(resolve, DEV_MODE_DELAY)); // Simulate network
                 
@@ -262,7 +249,24 @@ const App: React.FC = () => {
             let newAvatar: string;
             if (DEV_MODE) {
                 await new Promise(resolve => setTimeout(resolve, DEV_MODE_DELAY));
-                newAvatar = PLACEHOLDER_AVATAR;
+                
+                // In DEV_MODE, generate a unique 1x1 pixel placeholder to prevent bugs
+                // caused by identical base64 strings in the avatar history.
+                const canvas = document.createElement('canvas');
+                canvas.width = 1;
+                canvas.height = 1;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    const r = Math.floor(Math.random() * 256);
+                    const g = Math.floor(Math.random() * 256);
+                    const b = Math.floor(Math.random() * 256);
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    ctx.fillRect(0, 0, 1, 1);
+                }
+                const dataUrl = canvas.toDataURL('image/png');
+                // We only need the base64 part
+                newAvatar = dataUrl.split(',')[1];
+
             } else {
                 const currentAvatar = player.avatarHistory[player.selectedAvatarIndex];
                 newAvatar = await editHeadshotAvatar(player.photo, currentAvatar, prompt);
@@ -451,10 +455,10 @@ const App: React.FC = () => {
             case 'MODE_SELECTION':
                 return <ModeSelection onSelect={handleModeSelect} />;
             case 'PLAYER_SETUP':
-                if (players) return <PlayerSetup onComplete={handlePlayerSetupComplete} initialPlayers={players} onGoBack={handleBackToModeSelection} savedAvatars={savedAvatars} />;
+                if (players) return <PlayerSetup onComplete={handlePlayerSetupComplete} initialPlayers={players} onGoBack={handleBackToModeSelection} />;
                 break;
             case 'AVATAR_REVIEW':
-                if (players) return <AvatarReview players={players} setPlayers={setPlayers} onContinue={handleAvatarReviewComplete} savedAvatars={savedAvatars} setSavedAvatars={setSavedAvatars} onEditAvatar={handleEditAvatar} editingPlayerKey={editingPlayerKey} />;
+                if (players) return <AvatarReview players={players} setPlayers={setPlayers} onContinue={handleAvatarReviewComplete} onEditAvatar={handleEditAvatar} editingPlayerKey={editingPlayerKey} />;
                 break;
             case 'CATEGORIES':
                 if (players) return <CategoriesSetup onCategoriesSubmit={handleCategoriesSubmit} players={players} managedCategories={managedCategories} setManagedCategories={setManagedCategories} />;

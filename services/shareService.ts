@@ -48,4 +48,14 @@ export const handleShare = async (
       console.error('Error using Web Share API:', error);
       logAnalytics('share_native_error', { error });
       // If the user cancels the share, we don't open the modal.
-      if ((error as DOMException).name !== '
+      if ((error as DOMException).name !== 'AbortError') {
+        openModalFallback();
+      }
+      return false;
+    }
+  }
+  
+  // Fallback to the custom modal for desktop or unsupported mobile browsers
+  openModalFallback();
+  return true; // The modal flow is considered a "success" in terms of user action
+};

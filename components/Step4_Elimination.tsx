@@ -8,125 +8,132 @@ interface Step4EliminationProps {
   onEliminationComplete: (results: MashResults) => void;
 }
 
-// A more robust, pure function to calculate the entire elimination sequence.
-// It generates a step-by-step sequence for animation, including counts.
-const calculateEliminationSequence = (categories: { [key: string]: string[] }, magicNumber: number) => {
-    const sequence: { id: string, categoryKey: string, option: string, type: 'count' | 'eliminate' }[] = [];
-    const finalResults: MashResults = {};
-    const eliminatedIds: Set<string> = new Set();
-
-    // Create a flat list of all options with their original IDs.
-    const allOptions: { id: string, categoryKey: string, option: string }[] = Object.entries(categories).flatMap(([key, options]) =>
-        (options as string[]).map((option, index) => ({
-            id: `${key}-${index}`,
-            categoryKey: key,
-            option: option
-        }))
-    );
-    
-    const mutableCategoryCounts: { [key: string]: number } = {};
-    Object.entries(categories).forEach(([key, options]) => {
-        mutableCategoryCounts[key] = (options as string[]).length;
-    });
-
-    let currentIndex = -1;
-    const totalEliminationsNeeded = allOptions.length - Object.keys(categories).length;
-    let eliminationsDone = 0;
-
-    while (eliminationsDone < totalEliminationsNeeded) {
-        let count = 0;
-        
-        // Find the next available option to count towards.
-        while (count < magicNumber) {
-            currentIndex = (currentIndex + 1) % allOptions.length;
-            if (!eliminatedIds.has(allOptions[currentIndex].id)) {
-                const currentItem = allOptions[currentIndex];
-                sequence.push({ ...currentItem, type: 'count' });
-                count++;
-            }
-        }
-        
-        const itemToEliminate = allOptions[currentIndex];
-        
-        // A category is only solved when it has 1 item left. If we land on an item from a category that already has only 1 option, we skip it and continue.
-        if (mutableCategoryCounts[itemToEliminate.categoryKey] > 1) {
-            eliminatedIds.add(itemToEliminate.id);
-            eliminationsDone++;
-            mutableCategoryCounts[itemToEliminate.categoryKey]--;
-
-            // Change the last 'count' step in the sequence to an 'eliminate' step for the animation.
-            const lastCountIndex = sequence.length - 1;
-            if (lastCountIndex >= 0) {
-                sequence[lastCountIndex].type = 'eliminate';
-            }
-        }
-        // If the category is already solved, we do nothing and the loop continues, starting the count from the current position.
-    }
-
-    // Determine the final results from what's left.
-    for (const key of Object.keys(categories)) {
-        const remainingOption = allOptions.find(opt => opt.categoryKey === key && !eliminatedIds.has(opt.id));
-        if (remainingOption) {
-            finalResults[key] = remainingOption.option;
-        }
-    }
-    
-    return { sequence, finalResults };
-};
-
-
 const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNumber, onEliminationComplete }) => {
-    const { sequence, finalResults } = useMemo(() => calculateEliminationSequence(categories, magicNumber), [categories, magicNumber]);
-
     const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(() => new Set());
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
     const [isComplete, setIsComplete] = useState(false);
-    const [animationIndex, setAnimationIndex] = useState(0);
-    // FIX: Explicitly initialize useRef with null to avoid ambiguity with the no-argument overload, which may confuse some build tools.
+    const [animationStep, setAnimationStep] = useState(0);
+
+    const calculationState = useRef({
+        allOptions: Object.entries(categories).flatMap(([key, options]) =>
+            (options as string[]).map((option, index) => ({ id: `${key}-${index}`, categoryKey: key, option }))
+        ),
+        currentIndex: -1,
+        count: 0,
+        eliminationsDone: 0,
+        totalEliminationsNeeded: Object.entries(categories).reduce((sum, [, options]) => sum + (options as string[]).length, 0) - Object.keys(categories).length,
+    });
+
     const animationTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
-        // Stop if animation is complete or if there's no sequence.
-        if (isComplete || !sequence || animationIndex >= sequence.length) {
-            if (sequence && sequence.length > 0) {
-                 setIsComplete(true);
-                 setHighlightedId(null);
-            }
+        if (isComplete) {
+            if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
             return;
         }
 
-        const currentStep = sequence[animationIndex];
-        setHighlightedId(currentStep.id);
+        const state = calculationState.current;
+        if (state.eliminationsDone >= state.totalEliminationsNeeded) {
+            setIsComplete(true);
+            setHighlightedId(null);
+            return;
+        }
 
-        const isElimination = currentStep.type === 'eliminate';
-        // Speed up animation: 100ms for counting, 500ms for elimination.
-        const delay = isElimination ? 500 : 100;
+        // Find the next available item to highlight
+        let nextItemFound = false;
+        let nextIndex = state.currentIndex;
+        while (!nextItemFound) {
+            nextIndex = (nextIndex + 1) % state.allOptions.length;
+            if (!eliminatedIds.has(state.allOptions[nextIndex].id)) {
+                nextItemFound = true;
+            }
+        }
+        state.currentIndex = nextIndex;
+        const currentItem = state.allOptions[state.currentIndex];
+
+        setHighlightedId(currentItem.id);
+        
+        // Only increment the count if the current item is not the last one in its category
+        const remainingInCategory = state.allOptions.filter(opt =>
+            opt.categoryKey === currentItem.categoryKey && !eliminatedIds.has(opt.id)
+        ).length;
+        
+        let isLastInCategory = false;
+        if (remainingInCategory > 1) {
+            state.count++;
+        } else {
+            isLastInCategory = true;
+        }
+        
+        const isEliminationTurn = state.count === magicNumber;
+        const delay = isEliminationTurn ? 500 : (isLastInCategory ? 50 : 100);
 
         animationTimeoutRef.current = window.setTimeout(() => {
-            if (isElimination) {
-                setEliminatedIds(prev => new Set(prev).add(currentStep.id));
+            if (isEliminationTurn) {
+                state.count = 0;
+                // The currentItem is guaranteed to be eliminatable because we only incremented the count for items
+                // in categories with more than one option remaining.
+                setEliminatedIds(prev => new Set(prev).add(currentItem.id));
+                state.eliminationsDone++;
             }
-            // Move to the next step of the animation.
-            setAnimationIndex(prev => prev + 1);
+            setAnimationStep(prev => prev + 1);
         }, delay);
 
         return () => {
-            if (animationTimeoutRef.current) {
-                clearTimeout(animationTimeoutRef.current);
-            }
+            if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
         };
-    }, [animationIndex, sequence, isComplete]);
+    }, [animationStep, isComplete, magicNumber, eliminatedIds]);
     
-    const handleSkip = () => {
-        if (animationTimeoutRef.current) {
-            clearTimeout(animationTimeoutRef.current);
+    const finalResults = useMemo(() => {
+        if (!isComplete) return {};
+        const results: MashResults = {};
+        const state = calculationState.current;
+        for (const key of Object.keys(categories)) {
+            const remainingOption = state.allOptions.find(opt => opt.categoryKey === key && !eliminatedIds.has(opt.id));
+            if (remainingOption) {
+                results[key] = remainingOption.option;
+            }
         }
-        // Mark all items that would be eliminated as eliminated.
-        const allEliminated = new Set(sequence.filter(s => s.type === 'eliminate').map(s => s.id));
-        setEliminatedIds(allEliminated);
-        setHighlightedId(null);
+        return results;
+    }, [isComplete, categories, eliminatedIds]);
+
+
+    const handleSkip = () => {
+        if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+        
+        const allOptions = calculationState.current.allOptions;
+        const totalEliminationsNeeded = calculationState.current.totalEliminationsNeeded;
+
+        const finalEliminated = new Set<string>();
+        let currentIndex = -1;
+        
+        while(finalEliminated.size < totalEliminationsNeeded) {
+            let count = 0;
+            // Find the magicNumber-th valid item to eliminate.
+            while (count < magicNumber) {
+                // Find the next available (not eliminated) item.
+                currentIndex = (currentIndex + 1) % allOptions.length;
+                if (finalEliminated.has(allOptions[currentIndex].id)) {
+                    continue; 
+                }
+                
+                // Check if this item is a valid candidate for counting.
+                const candidate = allOptions[currentIndex];
+                const remainingInCategory = allOptions.filter(opt =>
+                    opt.categoryKey === candidate.categoryKey && !finalEliminated.has(opt.id)
+                ).length;
+                    
+                if (remainingInCategory > 1) {
+                    count++; // Only increment count if it's not the last in its category.
+                }
+            }
+            // The item at `currentIndex` is the one to be eliminated.
+            finalEliminated.add(allOptions[currentIndex].id);
+        }
+        
+        setEliminatedIds(finalEliminated);
         setIsComplete(true);
-        setAnimationIndex(sequence.length); // Prevent animation from continuing
+        setHighlightedId(null);
     };
 
     const handleSeeFuture = () => {
@@ -140,12 +147,14 @@ const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNu
                 <p className="text-indigo-200">Your magic number is: <span className="font-bold text-2xl text-yellow-300">{magicNumber}</span></p>
             </div>
 
-            <button
-                onClick={handleSkip}
-                className="mb-4 bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
-            >
-                Ain't Nobody Got Time For That!
-            </button>
+            {!isComplete && (
+                <button
+                    onClick={handleSkip}
+                    className="mb-4 bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                    Ain't Nobody Got Time For That!
+                </button>
+            )}
 
             <div className="grid grid-cols-2 gap-2 flex-grow">
                 {Object.entries(categories).map(([key, options]) => (
@@ -161,8 +170,8 @@ const Step4Elimination: React.FC<Step4EliminationProps> = ({ categories, magicNu
                                 return (
                                     <div
                                         key={id}
-                                        className={`p-1.5 rounded-md text-center text-xs break-words flex items-center justify-center
-                                            ${isEliminated ? 'bg-red-700/80 text-gray-400' : 'bg-white/5'} 
+                                        className={`p-1.5 rounded-md text-center text-xs break-words flex items-center justify-center transition-all duration-100
+                                            ${isEliminated ? 'bg-red-700/80 text-white/70' : 'bg-white/5'} 
                                             ${isWinner ? 'bg-green-500/90 text-white font-extrabold winner-animation border-2 border-yellow-300 shadow-lg shadow-green-500/50 scale-105' : ''}
                                             ${isHighlighted ? 'bg-yellow-400 text-black scale-110 shadow-xl' : ''}`
                                         }

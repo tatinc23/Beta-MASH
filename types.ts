@@ -11,7 +11,7 @@ export interface Player {
 }
 
 export interface Players {
-  mode: 'solo' | 'sabotage' | 'coop';
+  mode: 'solo' | 'coop';
   player1: Player; // In 'sabotage' mode, this is the user playing FOR the friend.
   player2?: Player; // In 'sabotage' mode, this is the friend. In 'coop', the second player.
   relationship?: string;

@@ -1,11 +1,10 @@
 import React from 'react';
 
 // Step 0: Mode Selection
-const ModeSelection: React.FC<{ onSelect: (mode: 'solo' | 'sabotage' | 'coop') => void }> = ({ onSelect }) => {
+const ModeSelection: React.FC<{ onSelect: (mode: 'solo' | 'coop') => void }> = ({ onSelect }) => {
     const modes = [
         { id: 'solo', title: 'Just Me', desc: 'The classic MASH experience, all about your future.', emoji: '👤' },
         { id: 'coop', title: '2-Player Co-op', desc: 'Team up with a friend to build a shared destiny.', emoji: '👥' },
-        { id: 'sabotage', title: 'Sabotage Mode', desc: 'Predict a friend\'s future. Will you be nice...?', emoji: '😈' },
     ];
 
     return (
@@ -15,7 +14,7 @@ const ModeSelection: React.FC<{ onSelect: (mode: 'solo' | 'sabotage' | 'coop') =
                 {modes.map(mode => (
                     <button
                         key={mode.id}
-                        onClick={() => onSelect(mode.id as 'solo' | 'sabotage' | 'coop')}
+                        onClick={() => onSelect(mode.id as 'solo' | 'coop')}
                         className="group bg-gradient-to-br from-white/5 to-white/0 rounded-lg p-4 text-left transition-all duration-300 transform hover:scale-105 border-2 border-transparent hover:border-pink-400 hover:shadow-2xl hover:shadow-pink-500/20"
                     >
                         <div className="flex flex-row items-center gap-4">

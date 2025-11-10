@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RICK_ROLL_VIDEO_URL } from '../constants';
 
-const FAKE_LOADING_DURATION = 6000;
+const FAKE_LOADING_DURATION = 10000; // Increased duration to show all messages
 const COUNTDOWN_DURATION = 3000;
 
 const LOADING_MESSAGES = [
@@ -16,8 +16,6 @@ const RickRollPrank: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
     const [prankStep, setPrankStep] = useState<'loading' | 'countdown' | 'reveal'>('loading');
     const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
     const [countdown, setCountdown] = useState(3);
-    const [needsManualPlay, setNeedsManualPlay] = useState(false);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
 
     // Effect for the fake loading sequence
     useEffect(() => {
@@ -27,7 +25,7 @@ const RickRollPrank: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
                     const currentIndex = LOADING_MESSAGES.indexOf(prev);
                     return LOADING_MESSAGES[(currentIndex + 1) % LOADING_MESSAGES.length];
                 });
-            }, 1000);
+            }, 2000);
 
             const timer = setTimeout(() => {
                 clearInterval(messageInterval);
@@ -52,30 +50,6 @@ const RickRollPrank: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
             }
         }
     }, [prankStep, countdown]);
-
-    useEffect(() => {
-        if (prankStep === 'reveal' && videoRef.current) {
-            const tryPlay = async () => {
-                try {
-                    await videoRef.current?.play();
-                    setNeedsManualPlay(false);
-                } catch {
-                    setNeedsManualPlay(true);
-                }
-            };
-            tryPlay();
-        }
-    }, [prankStep]);
-
-    const handleManualPlay = async () => {
-        if (!videoRef.current) return;
-        try {
-            await videoRef.current.play();
-            setNeedsManualPlay(false);
-        } catch {
-            setNeedsManualPlay(true);
-        }
-    };
 
     if (prankStep === 'loading') {
         return (
@@ -103,10 +77,8 @@ const RickRollPrank: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
     
     return (
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6 shadow-2xl border border-white/20 text-center animate-fade-in">
-            <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-yellow-300">SYKE!</h2>
-            <div className="aspect-video w-full max-w-sm mx-auto rounded-lg overflow-hidden shadow-lg border-2 border-white/20 mt-4 relative">
+            <div className="aspect-video w-full max-w-sm mx-auto rounded-lg overflow-hidden shadow-lg border-2 border-white/20 mt-4">
                  <video
-                    ref={videoRef}
                     src={RICK_ROLL_VIDEO_URL}
                     autoPlay
                     loop
@@ -115,14 +87,6 @@ const RickRollPrank: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
                  >
                     Your browser does not support the video tag.
                  </video>
-                 {needsManualPlay && (
-                    <button
-                        onClick={handleManualPlay}
-                        className="absolute inset-0 flex items-center justify-center bg-black/60 text-white font-semibold text-lg"
-                    >
-                        Tap to play the surprise 🎵
-                    </button>
-                 )}
             </div>
             <p className="text-indigo-200 text-sm mt-4">True living portraits are coming soon, I promise!</p>
             <button

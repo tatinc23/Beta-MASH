@@ -10,12 +10,7 @@ const WelcomeScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
     {
       emoji: '🎯',
       title: 'Your Mission',
-      content: "See the little envelope icon 👇? That's your direct hotline to M.A.S.H. HQ (aka me). It should open your email with everything pre-filled. Use it to roast the bugs, drop ideas, or tell me how cursed your result was.",
-    },
-    {
-      emoji: '🤝',
-      title: 'The Deal',
-      content: "Play it. Break it. Laugh at it. Tell me what sucked *before* I embarrass myself on the App Store. I owe you one… or at least a shoutout when this thing goes viral.",
+      content: "See the little envelope icon 👇? That's your direct hotline to M.A.S.H. HQ (aka me). It should open your email pre-filled. If that acts buggy, you can email me directly: emailme@tatinc.us. Use it to tell me what doesn't work, what you love, and what you hate. Play it. Break it. Laugh at it. Tell me what sucked *before* I embarrass myself on the App Store.",
     },
   ];
 
@@ -32,7 +27,7 @@ const WelcomeScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
         First off, thank you. Seriously. You’re helping test something that might be fun… or might melt your phone. Either way, we’re making history.
       </p>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left pt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left pt-4">
         {sections.map(section => (
           <div key={section.title} className="bg-black/20 p-4 rounded-lg border border-white/10 flex flex-col">
             <h3 className="text-lg font-bold text-cyan-300 mb-2">
@@ -46,13 +41,9 @@ const WelcomeScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
         ))}
       </div>
 
-      <p className="text-indigo-100 font-bold pt-4">
-        Now hit that button and let’s see what kind of digital nonsense your future holds.
-      </p>
-
       <button
         onClick={onStart}
-        className="w-full !mt-6 bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-extrabold py-4 px-4 rounded-lg text-2xl shadow-lg transform transition-all duration-300 hover:scale-105"
+        className="w-full !mt-8 bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-extrabold py-4 px-4 rounded-lg text-2xl shadow-lg transform transition-all duration-300 hover:scale-105"
       >
         I'm Ready! Let's Play!
       </button>

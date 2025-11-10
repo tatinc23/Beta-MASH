@@ -7,23 +7,21 @@ import LibraryModal from './LibraryModal';
 const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: string]: string[] }) => void, players: Players, managedCategories: CategoryConfig[], setManagedCategories: React.Dispatch<React.SetStateAction<CategoryConfig[]>> }> = ({ onCategoriesSubmit, players, managedCategories, setManagedCategories }) => {
     const formRef = useRef<HTMLFormElement>(null);
     const [customCategoryInput, setCustomCategoryInput] = useState('');
-    const [sabotageCustomValues, setSabotageCustomValues] = useState<{ [key: string]: string }>({});
     const [isLibraryOpen, setIsLibraryOpen] = useState<string | null>(null);
 
     useEffect(() => {
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, []);
 
-    const isSabotageQuickMode = players.mode === 'sabotage';
     const selectedCategories = useMemo(() => managedCategories.filter(c => c.isSelected), [managedCategories]);
 
     const initialCategoryState = useMemo(() => {
         const state: { [key: string]: string[] } = {};
         selectedCategories.forEach(cat => {
-            state[cat.key] = isSabotageQuickMode ? [] : Array(4).fill('');
+            state[cat.key] = Array(4).fill('');
         });
         return state;
-    }, [selectedCategories, isSabotageQuickMode]);
+    }, [selectedCategories]);
 
     const [categories, setCategories] = useState(initialCategoryState);
     
@@ -56,13 +54,12 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
         
         if (typeof lib === 'object' && 'singlePlayer' in lib) {
             const singlePlayerLib = (lib as { singlePlayer: LibraryCategory }).singlePlayer;
-            // Reverted: No longer filtering by gender. Return the whole single player library.
             return singlePlayerLib;
         }
 
         if (typeof lib === 'object' && 'coop' in lib) {
              const coopLib = (lib as { coop: LibraryCategory }).coop;
-             if (players.mode === 'coop' || players.mode === 'sabotage') {
+             if (players.mode === 'coop') {
                  return coopLib;
              }
         }
@@ -83,7 +80,7 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
         const surprisedCategories: { [key: string]: string[] } = {};
         selectedCategories.forEach(cat => {
             if (!cat.isCustom) {
-                const randomSelections = getRandomOptions(cat.key, isSabotageQuickMode ? 1 : 4);
+                const randomSelections = getRandomOptions(cat.key, 4);
                 if (randomSelections.length > 0) {
                     surprisedCategories[cat.key] = randomSelections;
                 } else {
@@ -94,14 +91,13 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
             }
         });
         setCategories(surprisedCategories);
-        setSabotageCustomValues({}); // Clear custom inputs when surprising
     };
 
     const isFormComplete = useMemo(() => {
         if (Object.keys(categories).length !== selectedCategories.length) return false;
-        const expectedLength = isSabotageQuickMode ? 1 : 4;
+        const expectedLength = 4;
         return Object.values(categories).every((options: string[]) => options.length === expectedLength && options.every(opt => opt && opt.trim() !== ''));
-    }, [categories, isSabotageQuickMode, selectedCategories]);
+    }, [categories, selectedCategories]);
     
      const handleToggleCategory = (keyToToggle: string) => {
         const isCurrentlySelected = managedCategories.find(c => c.key === keyToToggle)?.isSelected;
@@ -151,37 +147,35 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
             )}
              <div>
                 <h2 className="text-3xl font-bold mb-2 text-center">
-                    {isSabotageQuickMode ? "Craft Their Hilarious Fate!" : "Design Your Destiny! ✨"}
+                    Design Your Destiny! ✨
                 </h2>
                 <p className="text-indigo-200 mb-4 text-center text-sm max-w-md mx-auto">
-                   {isSabotageQuickMode ? "Pick one wonderfully weird option for each category." : "Fill in 4 options for each category. Use the 📚 icon to pick from our library, or manage your 8 categories and add custom ones below!"}
+                   Fill in 4 options for each category. Use the 📚 icon to pick from our library, or manage your 8 categories and add custom ones below!
                 </p>
 
-                {players.mode !== 'coop' && (
-                     <details className="bg-black/20 rounded-lg p-3 mb-4">
-                        <summary className="font-semibold text-indigo-200 cursor-pointer">Manage Categories ({selectedCategories.length}/8)</summary>
-                        <div className="mt-4 space-y-3">
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                {managedCategories.map(cat => (
-                                    <label key={cat.key} className="flex items-center gap-2 bg-white/5 p-2 rounded-md">
-                                        <input type="checkbox" checked={cat.isSelected} onChange={() => handleToggleCategory(cat.key)} className="accent-pink-500" />
-                                        <span>{CATEGORY_INFO[cat.key]?.icon || cat.icon} {CATEGORY_INFO[cat.key]?.name || cat.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    value={customCategoryInput}
-                                    onChange={e => setCustomCategoryInput(e.target.value)}
-                                    placeholder="Add custom category..."
-                                    className="flex-grow bg-white/10 rounded-md p-2 text-white text-sm placeholder-indigo-300/70 focus:ring-1 focus:ring-pink-400 focus:outline-none"
-                                />
-                                <button type="button" onClick={handleAddCustomCategory} className="bg-cyan-500 text-white font-bold px-4 rounded-md text-sm">Add</button>
-                            </div>
+                <details className="bg-black/20 rounded-lg p-3 mb-4">
+                    <summary className="font-semibold text-indigo-200 cursor-pointer">Manage Categories ({selectedCategories.length}/8)</summary>
+                    <div className="mt-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                            {managedCategories.map(cat => (
+                                <label key={cat.key} className="flex items-center gap-2 bg-white/5 p-2 rounded-md">
+                                    <input type="checkbox" checked={cat.isSelected} onChange={() => handleToggleCategory(cat.key)} className="accent-pink-500" />
+                                    <span>{CATEGORY_INFO[cat.key]?.icon || cat.icon} {CATEGORY_INFO[cat.key]?.name || cat.name}</span>
+                                </label>
+                            ))}
                         </div>
-                    </details>
-                )}
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={customCategoryInput}
+                                onChange={e => setCustomCategoryInput(e.target.value)}
+                                placeholder="Add custom category..."
+                                className="flex-grow bg-white/10 rounded-md p-2 text-white text-sm placeholder-indigo-300/70 focus:ring-1 focus:ring-pink-400 focus:outline-none"
+                            />
+                            <button type="button" onClick={handleAddCustomCategory} className="bg-cyan-500 text-white font-bold px-4 rounded-md text-sm">Add</button>
+                        </div>
+                    </div>
+                </details>
 
 
                 <button type="button" onClick={handleSurpriseMe} className="w-full mb-6 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg shadow-yellow-400/50 transform transition-all duration-300 hover:scale-105 text-base">✨ Surprise Me!</button>
@@ -190,74 +184,6 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
                         const { key, isCustom } = cat;
                         const catInfo = CATEGORY_INFO[key] || { icon: cat.icon, name: cat.name };
 
-                         if (isSabotageQuickMode) {
-                            if (isCustom) {
-                                return (
-                                    <div key={key}>
-                                        <h3 className="text-base font-semibold mb-2">{catInfo.icon} {catInfo.name}</h3>
-                                        <input
-                                            type="text"
-                                            value={categories[key]?.[0] || ''}
-                                            onChange={(e) => setCategories(prev => ({ ...prev, [key]: [e.target.value] }))}
-                                            className="w-full bg-white/10 rounded-md p-2 text-white text-sm placeholder-indigo-300/70 focus:ring-1 focus:ring-pink-400 focus:outline-none"
-                                            placeholder={`Enter a wacky option for ${catInfo.name}`}
-                                            required
-                                        />
-                                    </div>
-                                );
-                            }
-
-                            const lib = getLibraryForCategory(key);
-                            let sabotageOptions: string[] = [];
-                            if (lib) {
-                                if (Array.isArray(lib)) {
-                                    sabotageOptions = lib;
-                                } else {
-                                    const sabotageKey = Object.keys(lib).find(k => k.startsWith('Sabotage'));
-                                    if (sabotageKey && lib[sabotageKey]) {
-                                        sabotageOptions = flattenLibraryOptions({ [sabotageKey]: lib[sabotageKey] });
-                                    } else {
-                                        sabotageOptions = flattenLibraryOptions(lib);
-                                    }
-                                }
-                            }
-                            const selectedOption = categories[key]?.[0];
-                             return (
-                                <div key={key}>
-                                    <h3 className="text-base font-semibold mb-2">{catInfo.icon} {catInfo.name}</h3>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {sabotageOptions.map(option => (
-                                            <button 
-                                                type="button" 
-                                                key={option}
-                                                onClick={() => {
-                                                    setCategories(prev => ({ ...prev, [key]: [option] }));
-                                                    setSabotageCustomValues(prev => ({...prev, [key]: ''}));
-                                                }}
-                                                className={`p-2 rounded-md text-center cursor-pointer transition-all duration-300 text-xs flex items-center justify-center border-2 ${selectedOption === option ? 'bg-green-500/90 text-white font-extrabold winner-animation border-yellow-300 shadow-lg shadow-green-500/50 scale-105' : 'bg-white/10 border-transparent hover:border-pink-400'}`}
-                                            >
-                                                {option}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="mt-2">
-                                        <input
-                                            type="text"
-                                            value={sabotageCustomValues[key] || ''}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                setSabotageCustomValues(prev => ({...prev, [key]: value}));
-                                                setCategories(prev => ({...prev, [key]: [value]}));
-                                            }}
-                                            className="w-full bg-black/20 rounded-md p-2 text-white text-xs placeholder-indigo-300/70 focus:ring-1 focus:ring-pink-400 focus:outline-none"
-                                            placeholder="😈 Or write your own..."
-                                        />
-                                    </div>
-                                </div>
-                             )
-                        }
-
-                        // Default mode
                         return (
                              <div key={key}>
                                 <div className="flex justify-between items-center mb-2">
@@ -281,7 +207,7 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
                 </div>
             </div>
             <button type="submit" disabled={!isFormComplete} className="w-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold py-3 px-4 rounded-lg text-lg shadow-lg transform transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                {isSabotageQuickMode ? "Lock In Their Fate!" : players.mode === 'coop' ? "Who's Going to Draw the Spiral?" : "Draw the Spiral!"}
+                {players.mode === 'coop' ? "Who's Going to Draw the Spiral?" : "Draw the Spiral!"}
             </button>
         </form>
     );

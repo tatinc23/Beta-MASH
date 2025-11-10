@@ -5,8 +5,9 @@ const UpgradeTeaser: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
         {
             emoji: '🎬',
             title: 'Living Portraits',
-            description: 'Bring your avatar to life! Generate a short, looping video of your character smiling, winking, and reacting. Coming soon!',
-            videoSrc: 'https://assets.mixkit.co/videos/preview/mixkit-a-girl-looks-around-in-a-futuristic-3d-environment-47216-large.mp4'
+            description: 'Bring your final M.A.S.H. portrait to life with a short, animated video!',
+            videoSrc: '/assets/living-portrait-final.mp4',
+            posterSrc: '/assets/living-portrait-poster.png'
         },
         {
             emoji: '🎉',
@@ -17,8 +18,6 @@ const UpgradeTeaser: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
 
     return (
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-white/20 space-y-6 text-center animate-fade-in">
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-cyan-300">The Future of Your Future...</h2>
-            <p className="text-indigo-200">Get hyped for these epic upgrades, coming soon to a M.A.S.H. game near you!</p>
             <div className="space-y-4 pt-2">
                 {features.map(feature => (
                     <div key={feature.title} className="bg-black/20 rounded-lg p-4 text-left">
@@ -26,13 +25,14 @@ const UpgradeTeaser: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
                             <div className="text-4xl">{feature.emoji}</div>
                             <div className="flex-1">
                                 <h3 className="text-lg font-bold text-pink-300">{feature.title}</h3>
-                                <p className="text-indigo-200 text-sm mt-1">{feature.description}</p>
+                                {feature.description && <p className="text-indigo-200 text-sm mt-1">{feature.description}</p>}
                             </div>
                         </div>
                         {feature.videoSrc && (
                             <div className="mt-4">
                                 <video
                                   src={feature.videoSrc}
+                                  poster={feature.posterSrc}
                                   autoPlay
                                   loop
                                   muted

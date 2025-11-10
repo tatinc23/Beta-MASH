@@ -2,33 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Players, Player } from '../types';
 import { PLACEHOLDER_AVATAR_PHOTO } from '../constants';
 
-// Helper component
-const AvatarClosetModal: React.FC<{ savedAvatars: string[], onSelect: (base64: string) => void, onClose: () => void }> = ({ savedAvatars, onSelect, onClose }) => {
-    return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-gradient-to-br from-indigo-800 to-purple-900 rounded-2xl p-6 w-full max-w-md border border-white/20" onClick={e => e.stopPropagation()}>
-                <h2 className="text-2xl font-bold text-center mb-4">Avatar Closet</h2>
-                {savedAvatars.length === 0 ? (
-                    <p className="text-center text-indigo-200">Your closet is empty! Save some avatars after you generate them.</p>
-                ) : (
-                    <div className="grid grid-cols-3 gap-4">
-                        {savedAvatars.map((avatar, index) => (
-                            <img
-                                key={index}
-                                src={`data:image/png;base64,${avatar}`}
-                                alt={`Saved avatar ${index + 1}`}
-                                onClick={() => onSelect(avatar)}
-                                className="w-full aspect-square object-cover rounded-lg cursor-pointer transition transform hover:scale-105 border-2 border-transparent hover:border-pink-400"
-                            />
-                        ))}
-                    </div>
-                )}
-                 <button onClick={onClose} className="w-full mt-6 bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-4 rounded-lg">Close</button>
-            </div>
-        </div>
-    );
-};
-
 // SVG placeholder for a cleaner UI
 const PlaceholderIcon = () => (
     <div className="w-full h-full flex items-center justify-center">
@@ -39,18 +12,35 @@ const PlaceholderIcon = () => (
     </div>
 );
 
+const PhotoIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+);
+  
+const CameraIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+const AvatarIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+);
 
 // Main component
-const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPlayers: Players, onGoBack: () => void, savedAvatars: string[] }> = ({ onComplete, initialPlayers, onGoBack, savedAvatars }) => {
+const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPlayers: Players, onGoBack: () => void }> = ({ onComplete, initialPlayers, onGoBack }) => {
     const [players, setPlayers] = useState(initialPlayers);
     const [cameraTarget, setCameraTarget] = useState<'player1' | 'player2' | 'together' | null>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
-    const [closetTarget, setClosetTarget] = useState<'player1' | 'player2' | null>(null);
+    const [coopConsent, setCoopConsent] = useState(false);
+    const [uploadContext, setUploadContext] = useState<{ player: 'player1' | 'player2' | 'together', type: 'photo' | 'avatar' } | null>(null);
 
-    const fileInputRef1 = useRef<HTMLInputElement>(null);
-    const fileInputRef2 = useRef<HTMLInputElement>(null);
-    const fileInputRef3 = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     
@@ -87,19 +77,32 @@ const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPla
           setIsCameraOpen(false);
         }
     };
+    
+    const handleTriggerUpload = (player: 'player1' | 'player2' | 'together', type: 'photo' | 'avatar') => {
+        setUploadContext({ player, type });
+        fileInputRef.current?.click();
+    };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, target: 'player1' | 'player2' | 'together') => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!uploadContext) return;
+
         const file = event.target.files?.[0];
         if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            handlePhotoData({ base64, mimeType: file.type }, target);
-          };
-          reader.readAsDataURL(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = (reader.result as string).split(',')[1];
+                const data = { base64, mimeType: file.type };
+
+                if (uploadContext.type === 'photo') {
+                    handlePhotoData(data, uploadContext.player);
+                } else {
+                    handleAvatarData(data, uploadContext.player as 'player1' | 'player2');
+                }
+            };
+            reader.readAsDataURL(file);
         }
     };
-    
+
     const handlePhotoData = (photo: { base64: string, mimeType: string }, target: 'player1' | 'player2' | 'together') => {
         if (target === 'together') {
             setPlayers(prev => ({ ...prev, togetherPhoto: photo }));
@@ -110,35 +113,39 @@ const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPla
         }
     };
 
-    const handleSelectFromCloset = (base64: string, target: 'player1' | 'player2') => {
-         if (target === 'player1') {
-            setPlayers(prev => ({ ...prev, player1: { ...prev.player1, photo: undefined, avatarHistory: [base64], selectedAvatarIndex: 0 } }));
+    const handleAvatarData = (avatar: { base64: string, mimeType: string }, target: 'player1' | 'player2') => {
+        const playerData = {
+            photo: avatar, // Use avatar as photo for editing reference
+            avatarHistory: [avatar.base64],
+            selectedAvatarIndex: 0
+        };
+
+        if (target === 'player1') {
+            setPlayers(prev => ({ ...prev, player1: { ...prev.player1, ...playerData } }));
         } else if (target === 'player2') {
-            setPlayers(prev => ({ ...prev, player2: { ...prev.player2!, photo: undefined, avatarHistory: [base64], selectedAvatarIndex: 0 } }));
+            setPlayers(prev => ({ ...prev, player2: { ...prev.player2!, ...playerData } }));
         }
-        setClosetTarget(null);
     };
+
 
     // Derived State & Checks
     const isCoop = mode === 'coop';
-    const isSabotage = mode === 'sabotage';
     const isSolo = mode === 'solo';
 
     const isComplete = useMemo(() => {
         const p1NameReady = !!players.player1.name;
         const p2NameReady = !!players.player2?.name;
         if (isSolo) return p1NameReady;
-        if (isSabotage) return !!(players.player1.name && p2NameReady);
-        if (isCoop) return !!(p1NameReady && p2NameReady && players.relationship);
+        if (isCoop) return !!(p1NameReady && p2NameReady && players.relationship && coopConsent);
         return false;
-    }, [players, isSolo, isSabotage, isCoop]);
+    }, [players, isSolo, isCoop, coopConsent]);
 
     const handleSubmit = () => {
         // Create a deep copy to avoid direct state mutation before passing props
         const finalPlayers = JSON.parse(JSON.stringify(players));
 
         const p1NeedsAvatar = isSolo || isCoop;
-        const p2NeedsAvatar = isSabotage || isCoop;
+        const p2NeedsAvatar = isCoop;
 
         // If a player needs an avatar but hasn't provided a photo or chosen from the closet, assign a placeholder.
         if (p1NeedsAvatar && !finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) {
@@ -154,12 +161,12 @@ const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPla
     const submitButtonText = useMemo(() => {
         const hasPreselectedAvatar = 
             (isSolo && players.player1.avatarHistory) ||
-            (isSabotage && players.player2?.avatarHistory) ||
             (isCoop && players.player1.avatarHistory && players.player2?.avatarHistory);
 
         if (hasPreselectedAvatar) return "Let's Go!";
+        if (isSolo) return "Generate My Avatar";
         return "Generate Our Avatars";
-    }, [isSolo, isSabotage, isCoop, players]);
+    }, [isSolo, isCoop, players]);
     
     // RENDER HELPERS
     const renderCameraModal = () => (
@@ -173,21 +180,26 @@ const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPla
         </div>
     );
     
-    const PlayerUploader = ({ playerKey, borderColor, fileRef }: { playerKey: 'player1' | 'player2', borderColor: string, fileRef: React.RefObject<HTMLInputElement> }) => {
+    const PlayerUploader = ({ playerKey, borderColor }: { playerKey: 'player1' | 'player2', borderColor: string }) => {
         const player = players[playerKey];
-        const displayImage = player?.avatarHistory?.[0] || (player?.photo ? `data:${player.photo.mimeType};base64,${player.photo.base64}` : null);
+        const displayImage = player?.avatarHistory?.[player.selectedAvatarIndex ?? 0] || (player?.photo ? `data:${player.photo.mimeType};base64,${player.photo.base64}` : null);
         
         return (
              <div className="flex flex-col items-center gap-3">
                 <div className={`w-32 h-32 bg-gray-900/50 p-2 rounded-lg flex items-center justify-center overflow-hidden border-4 ${borderColor} shadow-lg`}>
                     {displayImage ? <img src={displayImage.startsWith('data:') ? displayImage : `data:image/png;base64,${displayImage}`} alt="avatar" className="w-full h-full object-cover rounded-sm" /> : <PlaceholderIcon />}
                 </div>
-                <div className="flex gap-2 mt-1">
-                    <button type="button" onClick={() => fileRef.current?.click()} className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-md transition-transform transform hover:scale-105 border-b-4 border-cyan-700 active:border-b-0 active:translate-y-1">Upload</button>
-                    <button type="button" onClick={() => { setCameraTarget(playerKey); setIsCameraOpen(true); }} className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-md transition-transform transform hover:scale-105 border-b-4 border-purple-700 active:border-b-0 active:translate-y-1">Camera</button>
-                    <button type="button" onClick={() => setClosetTarget(playerKey)} className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-1.5 px-3 rounded-md text-xs shadow-md transition-transform transform hover:scale-105 border-b-4 border-pink-700 active:border-b-0 active:translate-y-1">Closet</button>
+                <div className="flex flex-col gap-2 w-48 mt-1">
+                    <button type="button" onClick={() => handleTriggerUpload(playerKey, 'photo')} className="flex items-center justify-center bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-cyan-700 active:border-b-0 active:translate-y-1">
+                        <PhotoIcon /> Upload Photo
+                    </button>
+                    <button type="button" onClick={() => { setCameraTarget(playerKey); setIsCameraOpen(true); }} className="flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-purple-700 active:border-b-0 active:translate-y-1">
+                        <CameraIcon /> Use Camera
+                    </button>
+                    <button type="button" onClick={() => handleTriggerUpload(playerKey, 'avatar')} className="flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-green-700 active:border-b-0 active:translate-y-1">
+                        <AvatarIcon /> Upload Avatar
+                    </button>
                 </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileRef} onChange={(e) => handleFileChange(e, playerKey)} className="hidden" />
             </div>
         );
     };
@@ -195,18 +207,17 @@ const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPla
     return (
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-white/20 space-y-6 animate-fade-in">
             {renderCameraModal()}
-            {closetTarget && <AvatarClosetModal savedAvatars={savedAvatars} onSelect={(b64) => handleSelectFromCloset(b64, closetTarget)} onClose={() => setClosetTarget(null)} />}
+            <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+            
             {/* --- HEADER --- */}
             <div>
-                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-center">
+                 <h2 className="text-2xl md:text-3xl font-bold mb-2 text-center">
                     {isCoop && "Who's Playing?"}
-                    {isSabotage && "Who's Getting Sabotaged?"}
-                    {isSolo && "Tell Us About Yourself!"}
+                    {isSolo && "Design Your M.A.S.H. Star!"}
                 </h2>
                 <p className="text-center text-indigo-200 mb-6 text-sm">
                     {isCoop && "A 2-player co-op adventure!"}
-                    {isSabotage && "Enter your name and your friend's details."}
-                    {isSolo && "This info helps the AI create your personalized future."}
+                    {isSolo && "First, we just need your name. Then, get ready to play!"}
                 </p>
             </div>
 
@@ -218,44 +229,45 @@ const PlayerSetup: React.FC<{ onComplete: (players: Players) => void, initialPla
                      </div>
                      <div className="border-t border-white/10 w-full pt-4 text-center mt-2">
                          <h3 className="text-xl font-bold tracking-tight text-yellow-300">📸 Strike a Pose! 📸</h3>
-                         <p className="text-indigo-200 text-sm">Upload, snap a photo, or choose from your Closet!</p>
-                         <p className="text-xs text-indigo-300/80 mt-1">For best results, use a clear, forward-facing headshot. No sunglasses!</p>
+                         <p className="text-indigo-200 text-sm">Upload a photo, use your camera, or use a pre-made avatar!</p>
+                         <p className="text-xs text-indigo-300/80 mt-1">For best results with a photo, use a clear, forward-facing headshot. No sunglasses!</p>
                          {cameraError && <p className="text-red-400 text-center text-sm mt-2">{cameraError}</p>}
                     </div>
-                    <PlayerUploader playerKey="player1" borderColor="border-cyan-400" fileRef={fileInputRef1} />
+                    <PlayerUploader playerKey="player1" borderColor="border-cyan-400" />
                 </div>}
 
-                {isSabotage && <>
-                    <SabotageNameInputs players={players} setPlayers={setPlayers} />
-                     <div className="text-center border-t border-white/10 pt-6">
-                         <h3 className="text-xl font-bold tracking-tight text-yellow-300">😈 Got a Good Pic of Them? 😈</h3>
-                        <p className="text-indigo-200 text-sm">Upload a clear, forward-facing photo for the most roastable results. No sunglasses!</p>
-                        {cameraError && <p className="text-red-400 text-center text-sm mt-2">{cameraError}</p>}
-                    </div>
-                     <div className="flex justify-center">
-                        <PlayerUploader playerKey="player2" borderColor="border-pink-400" fileRef={fileInputRef2} />
-                    </div>
-                </>}
-                
                 {isCoop && <>
                     <CoopNameInputs players={players} setPlayers={setPlayers} />
                      <div className="text-center border-t border-white/10 pt-6">
                         <h3 className="text-xl font-bold tracking-tight text-yellow-300">📸 Strike a Pose! 📸</h3>
-                        <p className="text-indigo-200 text-sm">Upload, snap a photo, or choose from your Closet!</p>
-                        <p className="text-xs text-indigo-300/80 mt-1">For best results, use clear, forward-facing headshots. No sunglasses!</p>
+                        <p className="text-indigo-200 text-sm">Upload photos/avatars or use a camera for each player!</p>
+                        <p className="text-xs text-indigo-300/80 mt-1">For best results with a photo, use clear, forward-facing headshots. No sunglasses!</p>
                          {cameraError && <p className="text-red-400 text-center text-sm mt-2">{cameraError}</p>}
                     </div>
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 justify-around">
                         <div className="flex flex-col items-center gap-4">
                             <span className="font-bold text-lg text-cyan-300">{players.player1.name || 'Player 1'}</span>
-                            <PlayerUploader playerKey="player1" borderColor="border-cyan-400" fileRef={fileInputRef1} />
+                            <PlayerUploader playerKey="player1" borderColor="border-cyan-400" />
                         </div>
                         <div className="flex flex-col items-center gap-4">
                             <span className="font-bold text-lg text-pink-400">{players.player2?.name || 'Player 2'}</span>
-                            <PlayerUploader playerKey="player2" borderColor="border-pink-400" fileRef={fileInputRef2} />
+                            <PlayerUploader playerKey="player2" borderColor="border-pink-400" />
                         </div>
                     </div>
-                    <CoopTogetherUploader players={players} setCameraTarget={setCameraTarget} setIsCameraOpen={setIsCameraOpen} fileRef={fileInputRef3} onChange={handleFileChange} />
+                     <div className="bg-black/20 p-4 rounded-lg mt-4">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={coopConsent}
+                                onChange={(e) => setCoopConsent(e.target.checked)}
+                                className="mt-1 accent-pink-500 h-5 w-5"
+                            />
+                            <span className="text-indigo-200 text-sm">
+                                I confirm that I have permission from both people to use their photos to generate in-game avatars.
+                            </span>
+                        </label>
+                    </div>
+                    <CoopTogetherUploader players={players} setCameraTarget={setCameraTarget} setIsCameraOpen={setIsCameraOpen} handleTriggerUpload={handleTriggerUpload} />
                 </>}
             </div>
 
@@ -297,6 +309,7 @@ const CoopNameInputs: React.FC<{ players: Players, setPlayers: React.Dispatch<Re
         'Friends': ['Besties', 'Siblings'],
         'Relationship': ['Dating', 'Married', 'Crush', 'Exes'],
         'Family': ['Dad & Son', 'Dad & Daughter', 'Mom & Son', 'Mom & Daughter'],
+        'Special': ['Sabotage'],
     };
 
     const RELATIONSHIP_PLACEHOLDERS: { [key: string]: [string, string] } = {
@@ -304,6 +317,7 @@ const CoopNameInputs: React.FC<{ players: Players, setPlayers: React.Dispatch<Re
         'Dating': ['Partner 1', 'Partner 2'], 'Crush': ['Your Name', 'Your Crush\'s Name'], 'Exes': ['Ex 1', 'Ex 2'], 'Married': ['Spouse 1', 'Spouse 2'],
         'Dad & Son': ['Dad\'s Name', 'Son\'s Name'], 'Dad & Daughter': ['Dad\'s Name', 'Daughter\'s Name'],
         'Mom & Son': ['Mom\'s Name', 'Son\'s Name'], 'Mom & Daughter': ['Mom\'s Name', 'Daughter\'s Name'],
+        'Sabotage': ["Your Name", "Friend's Name"],
     };
     const p1Placeholder = players.relationship ? (RELATIONSHIP_PLACEHOLDERS[players.relationship]?.[0] || 'Player 1') : 'Player 1 Name';
     const p2Placeholder = players.relationship ? (RELATIONSHIP_PLACEHOLDERS[players.relationship]?.[1] || 'Player 2') : 'Player 2 Name';
@@ -348,18 +362,11 @@ const CoopNameInputs: React.FC<{ players: Players, setPlayers: React.Dispatch<Re
     </>
 };
 
-const SabotageNameInputs: React.FC<{ players: Players, setPlayers: React.Dispatch<React.SetStateAction<Players>> }> = ({ players, setPlayers }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input type="text" placeholder="Your Name" value={players.player1.name} onChange={(e) => setPlayers(p => ({...p, player1: {...p.player1, name: capitalizeFirstLetter(e.target.value)}}))} className="w-full bg-white/10 rounded-md p-3 text-white placeholder-indigo-300/70 focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
-        <input type="text" placeholder="Your Friend's Name" value={players.player2?.name || ''} onChange={(e) => setPlayers(p => ({...p, player2: {...p.player2!, name: capitalizeFirstLetter(e.target.value)}}))} className="w-full bg-white/10 rounded-md p-3 text-white placeholder-indigo-300/70 focus:ring-2 focus:ring-pink-400 focus:outline-none" required />
-    </div>
-);
-
 const SoloNameInput: React.FC<{ player: Player, setPlayers: React.Dispatch<React.SetStateAction<Players>> }> = ({ player, setPlayers }) => (
     <input type="text" placeholder="Your Name" value={player.name} onChange={(e) => setPlayers(p => ({...p, player1: {...p.player1, name: capitalizeFirstLetter(e.target.value)}}))} className="w-full bg-white/10 rounded-md p-3 text-white placeholder-indigo-300/70 focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
 );
 
-const CoopTogetherUploader: React.FC<{ players: Players, setCameraTarget: any, setIsCameraOpen: any, fileRef: any, onChange: any }> = ({ players, setCameraTarget, setIsCameraOpen, fileRef, onChange }) => (
+const CoopTogetherUploader: React.FC<{ players: Players, setCameraTarget: any, setIsCameraOpen: any, handleTriggerUpload: (player: 'together', type: 'photo') => void }> = ({ players, setCameraTarget, setIsCameraOpen, handleTriggerUpload }) => (
     <>
         <div className="text-center">
             <h3 className="text-lg font-bold tracking-tight text-yellow-300">...and one of you together! (Optional)</h3>
@@ -369,11 +376,14 @@ const CoopTogetherUploader: React.FC<{ players: Players, setCameraTarget: any, s
                 <div className="w-32 h-32 bg-gray-900/50 p-2 rounded-lg flex items-center justify-center overflow-hidden border-4 border-yellow-400 shadow-lg">
                     {players.togetherPhoto ? <img src={`data:${players.togetherPhoto.mimeType};base64,${players.togetherPhoto.base64}`} alt="together" className="w-full h-full object-cover rounded-sm" /> : <PlaceholderIcon />}
                 </div>
-                <div className="flex gap-2 mt-1">
-                    <button type="button" onClick={() => fileRef.current?.click()} className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-cyan-700 active:border-b-0 active:translate-y-1">Upload</button>
-                    <button type="button" onClick={() => { setCameraTarget('together'); setIsCameraOpen(true); }} className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-purple-700 active:border-b-0 active:translate-y-1">Camera</button>
+                <div className="flex flex-col gap-2 w-48 mt-1">
+                    <button type="button" onClick={() => handleTriggerUpload('together', 'photo')} className="flex items-center justify-center bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-cyan-700 active:border-b-0 active:translate-y-1">
+                        <PhotoIcon /> Upload Photo
+                    </button>
+                    <button type="button" onClick={() => { setCameraTarget('together'); setIsCameraOpen(true); }} className="flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-transform transform hover:scale-105 border-b-4 border-purple-700 active:border-b-0 active:translate-y-1">
+                        <CameraIcon /> Use Camera
+                    </button>
                 </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileRef} onChange={(e) => onChange(e, 'together')} className="hidden" />
             </div>
         </div>
     </>

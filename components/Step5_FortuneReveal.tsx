@@ -22,11 +22,11 @@ const ShareButtons: React.FC<{
         <div className="flex justify-center gap-2">
             {!!navigator.clipboard?.write &&
                 <button onClick={onCopyImage} className="bg-white/10 hover:bg-white/20 text-white font-bold py-1 px-3 rounded-md text-xs w-28 text-center transition-colors">
-                    {copyStatus || '🖼️ Copy Image'}
+                    {copyStatus || 'Copy Image'}
                 </button>
             }
             <button onClick={() => handleSaveImage(base64Image)} className="bg-white/10 hover:bg-white/20 text-white font-bold py-1 px-3 rounded-md text-xs w-28 text-center">
-                💾 Save Image
+                Save Image
             </button>
         </div>
     );
@@ -118,20 +118,22 @@ const FortuneReveal: React.FC<{
       </div>
     );
 
+    const isSabotage = players.mode === 'coop' && players.relationship === 'Sabotage';
+
     const title = useMemo(() => {
         const baseTitle = (() => {
-            if (players.mode === 'coop') return `${players.player1.name} & ${players.player2!.name}'s`;
-            if (players.mode === 'sabotage') return `${players.player2!.name}'s`;
+            if (players.mode === 'coop' && !isSabotage) return `${players.player1.name} & ${players.player2!.name}'s`;
+            if (isSabotage) return `${players.player2!.name}'s`;
             return `${players.player1.name}'s`;
         })();
         return `${baseTitle} M.A.S.H. Fortune`;
-    }, [players]);
+    }, [players, isSabotage]);
     
     const storyButtonText = useMemo(() => {
-        if (players.mode === 'coop') return "Write Our Adventure";
-        if (players.mode === 'sabotage') return "Write Their Hilarious Story";
+        if (players.mode === 'coop' && !isSabotage) return "Write Our Adventure";
+        if (isSabotage) return "Write Their Hilarious Story";
         return "Write My Adventure";
-    }, [players.mode]);
+    }, [players.mode, isSabotage]);
 
     const imageButtonText = useMemo(() => {
         if (players.mode === 'coop') return "Wanna SEE your MASH Fortune Together?";
@@ -139,10 +141,10 @@ const FortuneReveal: React.FC<{
     }, [players.mode]);
 
     const storyTitle = useMemo(() => {
-        if (players.mode === 'coop') return "Your Co-op Adventure!";
-        if (players.mode === 'sabotage') return "The Story of Their Life!";
+        if (players.mode === 'coop' && !isSabotage) return "Your Dynamic Destiny!";
+        if (isSabotage) return "The Story of Their Life!";
         return "Your Grand Adventure!";
-    }, [players.mode]);
+    }, [players.mode, isSabotage]);
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -166,12 +168,14 @@ const FortuneReveal: React.FC<{
                     {/* Story */}
                     <div ref={storyRef} className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6 shadow-2xl border border-white/20 text-center">
                         <h2 className="text-2xl font-bold mb-1">{storyTitle}</h2>
-                        <p className="text-indigo-200 mb-4 text-sm">Choose a vibe and create your destiny!</p>
-                        {!(players.mode === 'sabotage') && (
-                             <div className="flex justify-center gap-1 bg-black/20 p-1 rounded-full mb-4 max-w-xs mx-auto">
+                        <p className="text-indigo-200 mb-4 text-sm">Your destiny awaits! Choose a vibe and create your shared story.</p>
+                        
+                        {!isSabotage && (
+                            <div className="flex justify-center gap-1 bg-black/20 p-1 rounded-full mb-4 max-w-xs mx-auto">
                                 {STORY_MODES.map(mode => <button key={mode.id} onClick={() => setStoryTone(mode.id as StoryTone)} className={`flex-1 px-3 py-1.5 rounded-full text-xs font-semibold transition flex items-center justify-center gap-1.5 ${storyTone === mode.id ? 'bg-pink-500 text-white' : 'bg-transparent text-indigo-200 hover:bg-white/10'}`}>{mode.emoji} {mode.title}</button>)}
                             </div>
                         )}
+
                         {!story && <button onClick={onGenerateStory} className="bg-gradient-to-r from-yellow-400 to-orange-400 hover:scale-105 transition-transform text-black font-bold py-2 px-6 rounded-lg text-base shadow-lg">{storyButtonText}</button>}
                         {step === 'STORY_REVEAL' && story && (
                              <>

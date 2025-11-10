@@ -2,7 +2,21 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { MashResults, StoryTone, Players, Player } from '../types';
 import { CATEGORY_INFO } from '../constants';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY! });
+let cachedClient: GoogleGenAI | null = null;
+
+const getClient = () => {
+    if (!cachedClient) {
+        const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as Record<string, any>).env)
+            ? (import.meta as Record<string, any>).env
+            : undefined;
+        const apiKey = metaEnv?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
+        if (!apiKey) {
+            throw new Error("Missing Gemini API key. Please set GEMINI_API_KEY before running the app.");
+        }
+        cachedClient = new GoogleGenAI({ apiKey });
+    }
+    return cachedClient;
+};
 
 export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<string> => {
     if (!photo) throw new Error("A photo is required to generate an avatar.");
@@ -25,6 +39,7 @@ export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<st
     const imagePart = { inlineData: { data: photo.base64, mimeType: photo.mimeType } };
     const textPart = { text: prompt };
 
+    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [imagePart, textPart] },
@@ -68,6 +83,7 @@ export const editHeadshotAvatar = async (
     const avatarPart = { inlineData: { data: currentAvatar, mimeType: 'image/png' } };
     const textPart = { text: prompt };
 
+    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [photoPart, avatarPart, textPart] },
@@ -162,6 +178,7 @@ export const generateStory = async (results: MashResults, players: Players, tone
         ${resultsString}
     `.trim();
 
+    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
@@ -240,6 +257,7 @@ export const generateFortuneImage = async (
 
     const textPart = { text: prompt };
     
+    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [...imageParts, textPart] },

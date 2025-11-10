@@ -4,22 +4,22 @@ import { CATEGORY_INFO } from '../constants';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-const HARDCODED_STYLE_PROMPT = "The style is modern 3D animation, but rendered as a 2D portrait, reminiscent of a top-tier animation studio (like Pixar or Dreamworks). It should be expressive, vibrant, and full of personality with clean lines and expert shading.";
-
 export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<string> => {
     if (!photo) throw new Error("A photo is required to generate an avatar.");
 
     const prompt = `
-      **ROLE:** You are an expert character artist from a top-tier animation studio.
-      **TASK:** Create a single, high-quality, stylized cartoon headshot avatar based on the provided photo.
-      
-      **STYLE:** ${HARDCODED_STYLE_PROMPT} 
-      
-      **STYLE CONSISTENCY (ABSOLUTELY CRITICAL):** You will be asked to generate multiple avatars for different people in this game session. They must ALL share the exact same artistic style, as if drawn by the same artist for the same animated film. This is a non-negotiable rule. The lighting, line weight, shading, and overall feel must be uniform across all generated characters. DO NOT VARY THE STYLE.
+      **Your Role:** You are a skilled digital painter creating a headshot.
+      **Your Task:** Create a stylish digital painting of the person in the photo.
 
-      **CRITICAL LIKENESS DIRECTIVE (ABSOLUTE #1 PRIORITY):** Achieve a 9/10 or higher likeness to the person in the photo. This is more important than any other instruction. Meticulously analyze their key facial features—eye shape and color, nose, mouth, jawline, and unique characteristics like moles, freckles, or specific hair styles—and replicate them with extreme accuracy within the defined art style. The final character MUST be immediately recognizable as the person in the photo.
-      
-      **OUTPUT:** Create a head-and-shoulders portrait with a simple, neutral background.
+      **Art Style:**
+      - **Digital Painting:** The style should be a cool, stylized digital painting, not photorealistic. Think concept art for a modern video game or a stylish graphic novel.
+      - It is a head-and-shoulders portrait.
+      - The background should be a simple, abstract gradient or texture that complements the character.
+
+      **Guidance on Likeness (CRITICAL):**
+      - **The #1 priority is a recognizable likeness.** The painting must clearly look like the person in the photo.
+      - Faithfully capture their key features: hairstyle and color, face shape, glasses, facial hair, and their expression.
+      - It is crucial to maintain their core features and ethnicity. The goal is a stylized painting of *this specific person*, not a generic character.
     `.trim();
 
     const imagePart = { inlineData: { data: photo.base64, mimeType: photo.mimeType } };
@@ -35,7 +35,7 @@ export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<st
     if (firstPart && firstPart.inlineData) {
         return firstPart.inlineData.data;
     }
-    throw new Error("The AI failed to generate a headshot. Please try a different photo.");
+    throw new Error("The AI couldn't create an avatar from that photo. It might be too dark, blurry, or have multiple people. Try a different one!");
 };
 
 export const editHeadshotAvatar = async (
@@ -48,22 +48,20 @@ export const editHeadshotAvatar = async (
     if (!editPrompt) throw new Error("An edit prompt is required.");
 
     const prompt = `
-      **ROLE:** You are an expert character artist and retoucher.
-      **TASK:** Modify an existing cartoon avatar based on a text instruction, while strictly preserving the person's likeness and the art style.
+      **Your Role:** You are a skilled digital painter making a revision.
+      **Your Task:** Apply the user's requested edit to the "Current Avatar" while keeping the "digital painting" style and making sure it still looks like the person in the "Original Photo".
 
-      **INPUTS:**
-      1.  **Original Photo:** The primary source for the person's facial features. Likeness to this photo is the #1 priority.
-      2.  **Current Avatar:** The source for the artistic style. The output must match this style perfectly.
-      3.  **Edit Instruction:** The user's requested change.
+      **Your Materials:**
+      1.  **Original Photo:** The real person for likeness reference.
+      2.  **Current Avatar:** The digital painting you are editing.
+      3.  **Edit Request:** The user wants you to: "${editPrompt}".
 
-      **STYLE:** ${HARDCODED_STYLE_PROMPT}
+      **Art Style:**
+      - Maintain the **Digital Painting** style of the "Current Avatar."
 
-      **CRITICAL INSTRUCTIONS (MUST BE FOLLOWED):**
-      1.  **PRESERVE LIKENESS:** The modified avatar MUST still look exactly like the person in the original photo. Do not change their core facial structure.
-      2.  **PRESERVE STYLE:** The output MUST be in the identical art style as the "Current Avatar". Do not change lighting, shading, line work, or texture.
-      3.  **APPLY EDIT:** Apply the following modification based on the user's instruction: "${editPrompt}".
-
-      **OUTPUT:** Generate a new head-and-shoulders portrait that incorporates the edit while following all other instructions.
+      **Important Guidance:**
+      - The edited character must still be a clear, recognizable version of the person in the original photo.
+      - Apply the edit naturally within the existing art style.
     `.trim();
 
     const photoPart = { inlineData: { data: originalPhoto.base64, mimeType: originalPhoto.mimeType } };
@@ -80,7 +78,7 @@ export const editHeadshotAvatar = async (
     if (firstPart && firstPart.inlineData) {
         return firstPart.inlineData.data;
     }
-    throw new Error("The AI failed to edit the avatar. Please try a different prompt.");
+    throw new Error("The AI couldn't make that edit. Try a simpler prompt or a different idea!");
 };
 
 
@@ -104,6 +102,7 @@ function getRelationshipFlavor(players: Players): string {
             case 'Crush': return `Tell the story of ${p1} and their crush ${p2} with a sense of daydreaming, wish-fulfillment, and romantic comedy.`;
             case 'Exes': return `Describe the hilariously awkward and ironic shared future of the two exes, ${p1} and ${p2}.`;
             case 'Married': return `Portray the comfortable, loving, and established partnership of the married couple, ${p1} and ${p2}.`;
+            case 'Sabotage': return `Write a funny, slightly mean-spirited story about the future of ${p2}, as imagined by their friend ${p1}.`;
             default: return `Describe the shared future of ${p1} and ${p2}.`;
         }
     }
@@ -113,7 +112,6 @@ function getRelationshipFlavor(players: Players): string {
 const getStorySubject = (players: Players): string => {
     switch (players.mode) {
         case 'solo': return `the future of ${players.player1.name}`;
-        case 'sabotage': return `the future of ${players.player2!.name}, as imagined by their friend ${players.player1.name}`;
         case 'coop': return `the shared future of two people, ${players.player1.name} and ${players.player2!.name}`;
     }
 }
@@ -133,11 +131,6 @@ const getPlayerInfoForPrompt = (players: Players): string => {
         info += `Players: ${p1Info} and ${p2Info}.`;
     }
 
-    if (mode === 'sabotage' && player2) {
-        const p2Info = player2.name;
-        info += `This story is imagined by ${p1Info} for their friend, ${p2Info}.`;
-    }
-
     return info;
 }
 
@@ -149,7 +142,7 @@ export const generateStory = async (results: MashResults, players: Players, tone
     const resultsString = Object.entries(results)
         .map(([key, value]) => `- ${CATEGORY_INFO[key]?.name || key}: ${value}`)
         .join('\n');
-
+    
     const prompt = `
         You are a super funny, slightly immature storyteller creating a M.A.S.H. story.
 
@@ -187,27 +180,26 @@ export const generateFortuneImage = async (
     if (player1Avatar) imageParts.push({ inlineData: { data: player1Avatar, mimeType: 'image/png' } });
     if (player2Avatar) imageParts.push({ inlineData: { data: player2Avatar, mimeType: 'image/png' } });
 
-    const characterDirectives = () => {
-        switch(players.mode) {
-            case 'solo':
-                return `The character in the scene MUST be 10/10 identical to the cartoon headshot avatar provided as input. This avatar is the reference for ${players.player1.name}.`;
-            case 'sabotage':
-                 return `The character in the scene MUST be 10/10 identical to the cartoon headshot avatar provided as input. This avatar is the reference for ${players.player2!.name}.`;
-            case 'coop':
-                return `The two characters in the scene MUST be 10/10 identical to the two cartoon headshot avatars provided as input. This is the single most important goal.
-                - **Image 1** is the reference for ${players.player1.name}.
-                - **Image 2** is the reference for ${players.player2!.name}.`;
-        }
+    let characterGuidance = `
+      **Character Likeness (NON-NEGOTIABLE CORE INSTRUCTION):**
+      - Your absolute #1 priority is to perfectly recreate the character(s) from the provided avatar images.
+      - **DO NOT CHANGE THE FACES. DO NOT CHANGE THE HAIR. DO NOT CHANGE THE FEATURES.**
+      - Replicate the avatar's face, hair style, hair color, glasses, expression, and ethnicity with zero changes. The likeness to the avatar image is more important than any other part of this task.
+    `.trim();
+
+    if (players.mode === 'solo') {
+        characterGuidance += `\n- The character in the scene is ${players.player1.name}. Place this exact character into the new scene.`;
+    } else if (players.mode === 'coop' && player2Avatar) {
+        characterGuidance += `\n- There are two characters: ${players.player1.name} (first avatar image) and ${players.player2!.name} (second avatar image). Place these exact characters into the new scene together.`;
     }
 
     const sceneBrief = () => {
-         const mainCharName = players.mode === 'sabotage' ? players.player2!.name : players.player1.name;
+         const mainCharName = players.player1.name;
          switch(players.mode) {
             case 'solo':
-            case 'sabotage':
                 return `
                 - **Character:** ${mainCharName} is the focal point.
-                - **Spouse:** Their spouse is a 90s-style cartoon interpretation of '${results.Spouse}'. Include them in a fun, secondary way (e.g., in a framed photo, a thought bubble, or as a fun background character).
+                - **Spouse:** Their spouse is a digital painting interpretation of '${results.Spouse}'. Include them in a fun, secondary way (e.g., in a framed photo, a thought bubble, or as a fun background character).
                 - **Setting:** A ${results.Housing} in ${results.City}.
                 - **Job:** ${mainCharName} is dressed for or doing an action related to their job as a "${results.Job}".
                 - **Vehicle:** Their ${results.Car} is visible.
@@ -228,32 +220,26 @@ export const generateFortuneImage = async (
          }
     }
     
-    const sabotageNote = players.mode === 'sabotage'
-     ? `**SABOTAGE MODE ACTIVE:** This is a "roast" portrait meant to be a funny roast. Introduce a humorous, chaotic, or silly element based on one of their MASH results. Make it comedically disastrous or absurd in the portrait. The person from the photo should look stressed or comically serious amidst the chaos.`
-     : '';
-
     const prompt = `
-      **ROLE:** You are an expert character artist and scene illustrator.
-      **TASK:** Create a single, cohesive, story-rich illustration of a M.A.S.H. future.
-      **STYLE:** ${HARDCODED_STYLE_PROMPT} The entire image must be a unified piece of art.
-      ${sabotageNote}
-      
-      **CRITICAL LIKENESS DIRECTIVE (ABSOLUTE #1 PRIORITY):** ${characterDirectives()}
-      If there is a conflict between maintaining likeness and another instruction, ALWAYS prioritize likeness. Maintain their facial structure, features, and hair exactly. Do not alter their appearance.
-      
-      **ANIMATION PREPARATION (IMPORTANT):** The character's(s') eyes must be open, clear, and well-defined. The eyelids should be visible and distinct. This is crucial as the image will be used in a follow-up step to create a blinking animation. Generating clear, open eyes is essential for the animation to work correctly.
+      **Your Role:** You are a head illustrator creating a key scene in a stylish graphic novel.
+      **Your Task:** Create a single, fun "digital painting" that shows the M.A.S.H. results for the character(s) provided.
 
-      **SCENE COMPOSITION & STORYTELLING:**
-      Create a single, dynamic scene. The character(s) should be the focal point, interacting with their environment in a way that tells a story.
-      
-      **SCENE BRIEF (Visually represent ALL of these elements):**
+      ${characterGuidance}
+
+      **Art Style:**
+      - The whole scene—characters, background, everything—must be in the same **Digital Painting** style as the input avatar(s). Use a painterly, concept-art feel.
+
+      **Scene Composition:**
+      - Draw a single, unified scene. No collages.
+      - Make it funny and full of 90s details that creatively interpret the M.A.S.H. results.
+      - The scene should tell a story at a glance.
+
+      **Scene Brief - Here's what to include:**
       ${sceneBrief()}
-
-      Bring this entire future to life in one stunning, story-rich illustration. The final image MUST be a vertical 9:16 aspect ratio.
     `.trim();
 
     const textPart = { text: prompt };
-
+    
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [...imageParts, textPart] },
@@ -264,5 +250,5 @@ export const generateFortuneImage = async (
     if (firstPart && firstPart.inlineData) {
         return firstPart.inlineData.data;
     }
-    throw new Error("The AI failed to generate a portrait. Please try again.");
+    throw new Error("Major bummer! The AI art studio had a meltdown. Try generating again.");
 };

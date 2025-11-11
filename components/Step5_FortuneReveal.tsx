@@ -33,9 +33,9 @@ const ShareButtons: React.FC<{
 };
 
 const FortuneReveal: React.FC<{
-    step: string, results: MashResults, players: Players, story: string | null, storyTone: StoryTone, fortuneImage: string | null, setStoryTone: (tone: StoryTone) => void, onGenerateStory: () => void, onGenerateImage: () => void, onStartPrank: () => void, showAllResults: boolean, onSlideshowComplete: () => void
+    step: string, results: MashResults, players: Players, story: string | null, fortuneImage: string | null, onGenerateStory: () => void, onGenerateImage: () => void, onStartPrank: () => void, showAllResults: boolean, onSlideshowComplete: () => void
 }> = (props) => {
-    const { step, results, players, story, storyTone, fortuneImage, setStoryTone, onGenerateStory, onGenerateImage, onStartPrank, showAllResults, onSlideshowComplete } = props;
+    const { step, results, players, story, fortuneImage, onGenerateStory, onGenerateImage, onStartPrank, showAllResults, onSlideshowComplete } = props;
     const [resultStep, setResultStep] = useState(0);
     const resultKeys = Object.keys(results);
     const storyRef = useRef<HTMLDivElement>(null);
@@ -168,14 +168,8 @@ const FortuneReveal: React.FC<{
                     {/* Story */}
                     <div ref={storyRef} className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6 shadow-2xl border border-white/20 text-center">
                         <h2 className="text-2xl font-bold mb-1">{storyTitle}</h2>
-                        <p className="text-indigo-200 mb-4 text-sm">Your destiny awaits! Choose a vibe and create your shared story.</p>
+                        <p className="text-indigo-200 mb-4 text-sm">Your destiny awaits! And now, for your totally awesome story.</p>
                         
-                        {!isSabotage && (
-                            <div className="flex justify-center gap-1 bg-black/20 p-1 rounded-full mb-4 max-w-xs mx-auto">
-                                {STORY_MODES.map(mode => <button key={mode.id} onClick={() => setStoryTone(mode.id as StoryTone)} className={`flex-1 px-3 py-1.5 rounded-full text-xs font-semibold transition flex items-center justify-center gap-1.5 ${storyTone === mode.id ? 'bg-pink-500 text-white' : 'bg-transparent text-indigo-200 hover:bg-white/10'}`}>{mode.emoji} {mode.title}</button>)}
-                            </div>
-                        )}
-
                         {!story && <button onClick={onGenerateStory} className="bg-gradient-to-r from-yellow-400 to-orange-400 hover:scale-105 transition-transform text-black font-bold py-2 px-6 rounded-lg text-base shadow-lg">{storyButtonText}</button>}
                         {step === 'STORY_REVEAL' && story && (
                              <>
@@ -197,12 +191,13 @@ const FortuneReveal: React.FC<{
                     {/* Image */}
                     {step === 'STORY_REVEAL' && story && (
                         <div className="text-center animate-fade-in">
-                            <button onClick={onGenerateImage} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg">{imageButtonText}</button>
+                            <button onClick={onGenerateImage} className="w-full bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-bold py-3 px-4 rounded-lg text-lg shadow-lg transform transition-all duration-300 hover:scale-105">{imageButtonText}</button>
                         </div>
                     )}
                     {step === 'IMAGE_REVEAL' && fortuneImage && (
                         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6 shadow-2xl border border-white/20 text-center">
-                            <h2 className="text-2xl font-bold mb-4">Your Future Portrait!</h2>
+                            <h2 className="text-2xl font-bold mb-1">Your Future Portrait!</h2>
+                            <p className="text-indigo-200 mb-4 text-sm">The AI has painted a masterpiece of your awesome future!</p>
                             <img 
                                 src={`data:image/png;base64,${fortuneImage}`} 
                                 alt="Fortune portrait" 
@@ -223,7 +218,7 @@ const FortuneReveal: React.FC<{
                     {/* Animation Button */}
                     {step === 'IMAGE_REVEAL' && fortuneImage && (
                         <div className="text-center">
-                            <button onClick={onStartPrank} className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg">Bring my MASH Fortune to LIFE!</button>
+                            <button onClick={onStartPrank} className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transform transition-all duration-300 hover:scale-105">Bring my MASH Fortune to LIFE!</button>
                         </div>
                     )}
                  </div>

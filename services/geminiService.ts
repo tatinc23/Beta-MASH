@@ -2,44 +2,43 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { MashResults, StoryTone, Players, Player } from '../types';
 import { CATEGORY_INFO } from '../constants';
 
-let cachedClient: GoogleGenAI | null = null;
-
-const getClient = () => {
-    if (!cachedClient) {
-        const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as Record<string, any>).env)
-            ? (import.meta as Record<string, any>).env
-            : undefined;
-        const apiKey = metaEnv?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
-        if (!apiKey) {
-            throw new Error("Missing Gemini API key. Please set GEMINI_API_KEY before running the app.");
-        }
-        cachedClient = new GoogleGenAI({ apiKey });
-    }
-    return cachedClient;
-};
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const generateHeadshotAvatar = async (photo: Player['photo']): Promise<string> => {
     if (!photo) throw new Error("A photo is required to generate an avatar.");
 
     const prompt = `
-      **Your Role:** You are a skilled digital painter creating a headshot.
-      **Your Task:** Create a stylish digital painting of the person in the photo.
+      **MASTER PROMPT: Pixar-Style Character Portrait**
 
-      **Art Style:**
-      - **Digital Painting:** The style should be a cool, stylized digital painting, not photorealistic. Think concept art for a modern video game or a stylish graphic novel.
-      - It is a head-and-shoulders portrait.
-      - The background should be a simple, abstract gradient or texture that complements the character.
+      **1. CORE DIRECTIVE:**
+      You are a world-class 3D character artist from a top animation studio like Pixar or DreamWorks. Your task is to transform the person in the provided photograph into a high-fidelity, cinematic 3D character portrait. The final result should look like a promotional still from a major animated film.
 
-      **Guidance on Likeness (CRITICAL):**
-      - **The #1 priority is a recognizable likeness.** The painting must clearly look like the person in the photo.
-      - Faithfully capture their key features: hairstyle and color, face shape, glasses, facial hair, and their expression.
-      - It is crucial to maintain their core features and ethnicity. The goal is a stylized painting of *this specific person*, not a generic character.
+      **2. CRITICAL GOAL: LIKENESS & TRANSLATION:**
+      - **Primary Goal:** Achieve a strong, recognizable likeness to the person in the photo.
+      - **Method:** Faithfully translate their key facial structures (eye shape, nose, jawline, smile) into the stylized language of 3D animation. Do not simply caricature them; find the authentic appeal in their features and enhance it. Capture their unique expression and personality.
+
+      **3. ART STYLE & EXECUTION (NON-NEGOTIABLE):**
+      - **Overall Style:** Modern, high-end 3D animation (Pixar/DreamWorks aesthetic).
+      - **Textures & Materials:** Employ photorealistic textures within the stylized forms.
+          - **Skin:** Must have subtle details like pores, freckles, and subsurface scattering to give it a soft, lifelike glow.
+          - **Hair:** Render individual hair strands and clumps with realistic sheen and highlights. Avoid a "helmet" or plastic look.
+          - **Eyes:** Create expressive, soulful eyes with depth, reflections, and detailed irises. This is key to personality.
+      - **Lighting:** Use cinematic three-point lighting (key, fill, rim light) to sculpt the character's face, creating depth and dimension. Shadows should be soft and natural.
+      - **Rendering Quality:** The final image must be a high-resolution, polished render. No low-poly models, flat shading, or 2D elements.
+
+      **4. COMPOSITION & BACKGROUND:**
+      - **Framing:** A classic head-and-shoulders portrait. The character should be the undeniable focus.
+      - **Background:** A simple, out-of-focus background with a soft gradient or bokeh effect. The colors should complement the character's tones.
+
+      **5. ABSOLUTE PROHIBITIONS:**
+      - **NO** 2D, cel-shading, anime, or cartoon styles with hard outlines.
+      - **NO** flat, plastic-looking textures.
+      - **NO** harsh, unrealistic lighting.
     `.trim();
 
     const imagePart = { inlineData: { data: photo.base64, mimeType: photo.mimeType } };
     const textPart = { text: prompt };
 
-    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [imagePart, textPart] },
@@ -62,28 +61,30 @@ export const editHeadshotAvatar = async (
     if (!currentAvatar) throw new Error("An existing avatar is required for editing.");
     if (!editPrompt) throw new Error("An edit prompt is required.");
 
-    const prompt = `
-      **Your Role:** You are a skilled digital painter making a revision.
-      **Your Task:** Apply the user's requested edit to the "Current Avatar" while keeping the "digital painting" style and making sure it still looks like the person in the "Original Photo".
+     const prompt = `
+      **ROLE:** You are a senior 3D character artist at a major animation studio, tasked with revising a character model.
 
-      **Your Materials:**
-      1.  **Original Photo:** The real person for likeness reference.
-      2.  **Current Avatar:** The digital painting you are editing.
-      3.  **Edit Request:** The user wants you to: "${editPrompt}".
+      **TASK:** Modify the "Current Avatar" based on the user's "Edit Instruction," while preserving the character's core identity and the established high-quality art style.
 
-      **Art Style:**
-      - Maintain the **Digital Painting** style of the "Current Avatar."
+      **REFERENCE IMAGES:**
+      1.  **Original Photo:** The source of truth for the character's likeness.
+      2.  **Current Avatar:** The existing 3D character render you are modifying.
 
-      **Important Guidance:**
-      - The edited character must still be a clear, recognizable version of the person in the original photo.
-      - Apply the edit naturally within the existing art style.
+      **USER'S EDIT INSTRUCTION:** "${editPrompt}"
+
+      **CRITICAL RULES (NON-NEGOTIABLE):**
+      1.  **PRESERVE LIKENESS:** The edited avatar MUST still be a strong, recognizable likeness of the person in the "Original Photo." Do not deviate from their core facial structure.
+      2.  **MAINTAIN ART STYLE INTEGRITY:** The final image must remain in the **exact same high-fidelity 3D animation style** as the "Current Avatar." This includes:
+          - **Textures:** Photorealistic skin with subsurface scattering, detailed hair strands, and expressive eyes.
+          - **Lighting:** Cinematic three-point lighting with soft shadows.
+          - **Quality:** A polished, high-resolution final render.
+      3.  **SEAMLESS INTEGRATION:** Apply the user's requested edit naturally and believably within the established character design and art style.
     `.trim();
 
     const photoPart = { inlineData: { data: originalPhoto.base64, mimeType: originalPhoto.mimeType } };
     const avatarPart = { inlineData: { data: currentAvatar, mimeType: 'image/png' } };
     const textPart = { text: prompt };
 
-    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [photoPart, avatarPart, textPart] },
@@ -97,15 +98,6 @@ export const editHeadshotAvatar = async (
     throw new Error("The AI couldn't make that edit. Try a simpler prompt or a different idea!");
 };
 
-
-function getToneDescription(tone: StoryTone): string {
-    switch (tone) {
-        case 'sassy': return 'The tone should be cheeky, witty, and a little sassy.';
-        case 'wholesome': return 'The tone should be sweet, heartwarming, and positive.';
-        case 'roasty': return 'The tone should be a hilarious, over-the-top roast of the results. Really lean into the comedic chaos.';
-        default: return 'The tone should be fun and entertaining.';
-    }
-}
 
 function getRelationshipFlavor(players: Players): string {
     const p1 = players.player1.name;
@@ -151,7 +143,7 @@ const getPlayerInfoForPrompt = (players: Players): string => {
 }
 
 
-export const generateStory = async (results: MashResults, players: Players, tone: StoryTone): Promise<string> => {
+export const generateStory = async (results: MashResults, players: Players): Promise<string> => {
     const relationshipFlavor = getRelationshipFlavor(players);
     const storySubject = getStorySubject(players);
     const playerInfo = getPlayerInfoForPrompt(players);
@@ -169,7 +161,8 @@ export const generateStory = async (results: MashResults, players: Players, tone
         4.  **Length:** Write 3-4 short, funny paragraphs.
         5.  **Vibe:** Funny cartoon, silly 90s kids' show. Include 2-3 easy 90s references.
         6.  **Relationship Flavor:** ${relationshipFlavor}
-        7.  **Tone:** ${getToneDescription(tone)}
+        
+        **Parody Guideline:** If the story involves a real person (like a celebrity from the 'Spouse' category), portray them in a funny, over-the-top, parody style. This is satire and for entertainment purposes only. The humor should be about the absurd situation, not mean-spirited towards the person.
 
         **Story Context:** This story is about ${storySubject}.
         **Player Info:** ${playerInfo}
@@ -178,13 +171,17 @@ export const generateStory = async (results: MashResults, players: Players, tone
         ${resultsString}
     `.trim();
 
-    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
     });
+    
+    const storyText = response.text.trim();
+    if (!storyText) {
+      throw new Error("The AI returned an empty story. It might have writer's block!");
+    }
 
-    return response.text;
+    return storyText;
 };
 
 export const generateFortuneImage = async (
@@ -197,17 +194,15 @@ export const generateFortuneImage = async (
     if (player1Avatar) imageParts.push({ inlineData: { data: player1Avatar, mimeType: 'image/png' } });
     if (player2Avatar) imageParts.push({ inlineData: { data: player2Avatar, mimeType: 'image/png' } });
 
-    let characterGuidance = `
-      **Character Likeness (NON-NEGOTIABLE CORE INSTRUCTION):**
-      - Your absolute #1 priority is to perfectly recreate the character(s) from the provided avatar images.
-      - **DO NOT CHANGE THE FACES. DO NOT CHANGE THE HAIR. DO NOT CHANGE THE FEATURES.**
-      - Replicate the avatar's face, hair style, hair color, glasses, expression, and ethnicity with zero changes. The likeness to the avatar image is more important than any other part of this task.
-    `.trim();
-
-    if (players.mode === 'solo') {
-        characterGuidance += `\n- The character in the scene is ${players.player1.name}. Place this exact character into the new scene.`;
-    } else if (players.mode === 'coop' && player2Avatar) {
-        characterGuidance += `\n- There are two characters: ${players.player1.name} (first avatar image) and ${players.player2!.name} (second avatar image). Place these exact characters into the new scene together.`;
+    const characterDirectives = () => {
+        switch(players.mode) {
+            case 'solo':
+                return `The character in the scene MUST be a perfect recreation of the 3D-style headshot avatar provided as input. This avatar is the reference for ${players.player1.name}.`;
+            case 'coop':
+                return `The two characters in the scene MUST be perfect recreations of the two 3D-style headshot avatars provided as input. This is the single most important goal.
+                - **Image 1** is the reference for ${players.player1.name}.
+                - **Image 2** is the reference for ${players.player2!.name}.`;
+        }
     }
 
     const sceneBrief = () => {
@@ -216,7 +211,7 @@ export const generateFortuneImage = async (
             case 'solo':
                 return `
                 - **Character:** ${mainCharName} is the focal point.
-                - **Spouse:** Their spouse is a digital painting interpretation of '${results.Spouse}'. Include them in a fun, secondary way (e.g., in a framed photo, a thought bubble, or as a fun background character).
+                - **Spouse (Parody Rule):** Their spouse is a comical, exaggerated, Pixar-style CARICATURE of '${results.Spouse}'. This is a parody for entertainment. Include them in a fun, secondary way (e.g., in a framed photo, a thought bubble, or as a fun background character).
                 - **Setting:** A ${results.Housing} in ${results.City}.
                 - **Job:** ${mainCharName} is dressed for or doing an action related to their job as a "${results.Job}".
                 - **Vehicle:** Their ${results.Car} is visible.
@@ -227,7 +222,13 @@ export const generateFortuneImage = async (
             case 'coop':
                  // Dynamically build the scene brief from the co-op results
                  const coopBrief = Object.entries(results)
-                    .map(([key, value]) => `- **${CATEGORY_INFO[key]?.name || key}:** Visually represent "${value}" in the scene.`)
+                    .map(([key, value]) => {
+                        // Add the parody rule specifically for the spouse category in coop mode too
+                        if (key === 'Spouse') {
+                            return `- **${CATEGORY_INFO[key]?.name || key} (Parody Rule):** Visually represent a comical, exaggerated, Pixar-style CARICATURE of "${value}" in the scene.`;
+                        }
+                        return `- **${CATEGORY_INFO[key]?.name || key}:** Visually represent "${value}" in the scene.`;
+                    })
                     .join('\n');
 
                  return `
@@ -238,26 +239,25 @@ export const generateFortuneImage = async (
     }
     
     const prompt = `
-      **Your Role:** You are a head illustrator creating a key scene in a stylish graphic novel.
-      **Your Task:** Create a single, fun "digital painting" that shows the M.A.S.H. results for the character(s) provided.
+      **ROLE:** You are a scene and lighting artist for a 3D animated film, in the style of Pixar.
+      **TASK:** Create a full scene illustrating a M.A.S.H. future, featuring the 3D character(s) from the input avatar(s).
+      **STYLE:** The illustration must be in the **exact same high-quality 3D animation style** as the input character avatar(s). The entire scene—characters, backgrounds, and objects—must be stylistically consistent. Use cinematic lighting, rich textures, and a sense of depth. It should look like a final frame from a modern 3D animated movie.
+      
+      **NON-NEGOTIABLE CORE INSTRUCTION: CHARACTER RECREATION**
+      This is the most important rule. You must perfectly and exactly recreate the 3D character(s) from the provided avatar image(s). **Your task is to place these specific, pre-designed 3D characters into a new scene.** Do not alter their design, features, style, or colors.
+      ${characterDirectives()}
+      
+      **SCENE COMPOSITION:**
+      - The final image must be a single, unified scene, not a collage.
+      - The scene should be full of fun, whimsical details that bring the M.A.S.H. results to life.
+      - The composition should be dynamic and tell a story, like a key frame from an animation.
 
-      ${characterGuidance}
-
-      **Art Style:**
-      - The whole scene—characters, background, everything—must be in the same **Digital Painting** style as the input avatar(s). Use a painterly, concept-art feel.
-
-      **Scene Composition:**
-      - Draw a single, unified scene. No collages.
-      - Make it funny and full of 90s details that creatively interpret the M.A.S.H. results.
-      - The scene should tell a story at a glance.
-
-      **Scene Brief - Here's what to include:**
+      **SCENE BRIEF - VISUALIZE THESE ELEMENTS:**
       ${sceneBrief()}
     `.trim();
 
     const textPart = { text: prompt };
     
-    const ai = getClient();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [...imageParts, textPart] },

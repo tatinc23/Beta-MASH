@@ -108,7 +108,7 @@ const AvatarDisplay: React.FC<{
                     <button
                         onClick={() => handleEditAvatar(playerKey)}
                         disabled={isAnyEditing || (playerKey === 'player1' ? !editPrompts.p1 : !editPrompts.p2)}
-                        className={`w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-1.5 px-3 rounded-md text-sm disabled:opacity-50 ${isCurrentlyEditing ? 'animate-flicker-pulse' : ''}`}
+                        className={`w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-1.5 px-3 rounded-md text-sm disabled:opacity-50 border-b-4 border-purple-700 active:border-b-0 active:translate-y-1 transition-transform transform ${isCurrentlyEditing ? 'animate-flicker-pulse' : ''}`}
                     >
                         {isCurrentlyEditing ? 'Editing...' : `Edit Avatar (${player.avatarHistory.length}/3)`}
                     </button>
@@ -159,7 +159,7 @@ const AvatarReview: React.FC<{
                 <ul className="list-disc list-inside text-xs">
                     <li>You get <strong>2 edits</strong> per avatar. Each new edit builds on the previous one.</li>
                     <li>Be specific! "add a purple mohawk", "give them a pirate eye-patch".</li>
-                    <li><strong>Coming Soon:</strong> A closet to save & reuse your favorite avatars across games!</li>
+                    <li>Avatars are <strong>automatically saved</strong> to your closet for future games!</li>
                 </ul>
             </div>
 
@@ -174,7 +174,6 @@ const AvatarReview: React.FC<{
                     setEditPrompts={setEditPrompts}
                     editingPlayerKey={editingPlayerKey}
                 />
-                {/* FIX: Corrected typo from 'isSababoge' to 'isSabotage'. */}
                 {players.mode === 'coop' && !isSabotage && <AvatarDisplay
                     player={players.player2}
                     playerKey="player2"
@@ -186,7 +185,7 @@ const AvatarReview: React.FC<{
                     editingPlayerKey={editingPlayerKey}
                 />}
             </div>
-            <button onClick={onContinue} className="w-full max-w-sm mx-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-300 hover:scale-105">Looks Awesome, Let's Go!</button>
+            <button onClick={onContinue} className="w-full max-w-sm mx-auto bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-bold py-3 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-300 hover:scale-105">Looks Awesome, Let's Go!</button>
         </div>
     );
 };

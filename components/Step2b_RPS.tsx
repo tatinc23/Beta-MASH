@@ -30,7 +30,7 @@ const RockPaperScissors: React.FC<{ players: Players, onWinnerSelect: (winner: '
                         className="w-24 h-24 object-cover rounded-full border-4 border-cyan-400 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-cyan-400/50" 
                     />
                     <h3 className="font-bold text-base text-cyan-300 transition-all duration-300 group-hover:scale-105">{players.player1.name}</h3>
-                    <span className="bg-cyan-500/80 text-white font-bold py-1 px-4 rounded-lg text-sm shadow-md transition-transform transform group-hover:scale-105">I Won!</span>
+                    <span className="bg-cyan-500/80 text-white font-bold py-1 px-4 rounded-lg text-sm shadow-md transition-transform transform group-hover:scale-105 border-b-4 border-cyan-700">I Won!</span>
                 </div>
 
                 <div className="text-2xl font-bold text-indigo-300 animate-pulse pb-10">VS</div>
@@ -46,7 +46,7 @@ const RockPaperScissors: React.FC<{ players: Players, onWinnerSelect: (winner: '
                         className="w-24 h-24 object-cover rounded-full border-4 border-pink-400 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-pink-400/50"
                     />
                     <h3 className="font-bold text-base text-pink-400 transition-all duration-300 group-hover:scale-105">{players.player2!.name}</h3>
-                    <span className="bg-pink-500/80 text-white font-bold py-1 px-4 rounded-lg text-sm shadow-md transition-transform transform group-hover:scale-105">I Won!</span>
+                    <span className="bg-pink-500/80 text-white font-bold py-1 px-4 rounded-lg text-sm shadow-md transition-transform transform group-hover:scale-105 border-b-4 border-pink-700">I Won!</span>
                 </div>
             </div>
         </div>

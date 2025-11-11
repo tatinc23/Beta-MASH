@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Players, MashResults, StoryTone, Player, CategoryConfig } from './types';
 import { generateHeadshotAvatar, editHeadshotAvatar, generateStory, generateFortuneImage } from './services/geminiService';
+import { saveToCloset } from './services/closetService';
 import { DEFAULT_CATEGORIES, PLACEHOLDER_AVATAR, DIAL_UP_SOUND_DATA_URL, PLACEHOLDER_AVATAR_2 } from './constants';
 import { COOP_CATEGORIES } from './coop_categories';
 
@@ -84,7 +85,6 @@ const App: React.FC = () => {
     const [magicNumber, setMagicNumber] = useState<number | null>(null);
     const [results, setResults] = useState<MashResults | null>(null);
     const [story, setStory] = useState<string | null>(null);
-    const [storyTone, setStoryTone] = useState<StoryTone>('sassy');
     const [fortuneImage, setFortuneImage] = useState<string | null>(null);
     const [rpsWinner, setRpsWinner] = useState<'player1' | 'player2' | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -165,30 +165,39 @@ const App: React.FC = () => {
         setStep('MODE_SELECTION');
     };
 
-    const handleModeSelect = (mode: 'solo' | 'coop') => {
+    const handleModeSelect = (
+        mode: 'solo' | 'coop',
+        gameStyle: 'avatar' | 'quick'
+    ) => {
         const basePlayer: Player = { name: '' };
         setPlayers({
             mode,
+            gameStyle,
             player1: {...basePlayer},
-            ...(mode !== 'solo' && { player2: {...basePlayer} }),
-            ...(mode === 'coop' && { relationship: '' }),
+            ...(mode === 'coop' && { player2: {...basePlayer} }),
+            ...(mode === 'coop' && gameStyle === 'avatar' && { relationship: '' }),
         });
         setStep('PLAYER_SETUP');
     };
 
     const handlePlayerSetupComplete = async (finalPlayers: Players) => {
+        setPlayers(finalPlayers);
+
+        if (finalPlayers.gameStyle === 'quick') {
+            handleAvatarReviewComplete(); // This skips to category setup
+            return;
+        }
+
         const needsAvatarGeneration = 
             (finalPlayers.mode === 'solo' && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) ||
             (finalPlayers.mode === 'coop' && finalPlayers.player1.photo && !finalPlayers.player1.avatarHistory) ||
             (finalPlayers.mode === 'coop' && finalPlayers.player2?.photo && !finalPlayers.player2.avatarHistory);
 
         if (!needsAvatarGeneration) {
-            setPlayers(finalPlayers);
             handleAvatarReviewComplete();
             return;
         }
-
-        setPlayers(finalPlayers);
+        
         setStep('AVATAR_GENERATION');
         setError(null);
         try {
@@ -221,6 +230,9 @@ const App: React.FC = () => {
 
                 const [p1Avatar, p2Avatar] = await Promise.all([p1Promise, p2Promise]);
                 
+                if (p1Avatar) saveToCloset(p1Avatar);
+                if (p2Avatar) saveToCloset(p2Avatar);
+
                 setPlayers(p => {
                     if (!p) return null;
                     const newP = {...p};
@@ -272,6 +284,8 @@ const App: React.FC = () => {
                 newAvatar = await editHeadshotAvatar(player.photo, currentAvatar, prompt);
             }
 
+            if (newAvatar) saveToCloset(newAvatar);
+
             setPlayers(prev => {
                 if (!prev) return null;
                 const updatedHistory = [...(prev[playerKey]?.avatarHistory ?? []), newAvatar];
@@ -308,6 +322,7 @@ const App: React.FC = () => {
                 setManagedCategories(dynamicCats);
             }
         } else {
+            // This is the default for solo mode AND for quick-play coop mode
             setManagedCategories(DEFAULT_CATEGORIES.map(c => ({...c, isSelected: true})));
         }
         setStep('CATEGORIES');
@@ -316,10 +331,10 @@ const App: React.FC = () => {
 
     const handleCategoriesSubmit = (submittedCategories: { [key: string]: string[] }) => {
         setCategories(submittedCategories);
-        if (players?.mode === 'coop') {
+        if (players?.mode === 'coop' && players.gameStyle === 'avatar') {
             setStep('RPS');
         } else {
-            setStep('SPIRAL'); // Skip RPS for solo
+            setStep('SPIRAL'); // Skip RPS for solo and quick-play modes
         }
     };
 
@@ -348,7 +363,7 @@ const App: React.FC = () => {
                 await new Promise(resolve => setTimeout(resolve, DEV_MODE_DELAY));
                 setStory('This is a super cool story about your M.A.S.H. future! It was totally tubular.');
             } else {
-                const newStory = await generateStory(results, players, storyTone);
+                const newStory = await generateStory(results, players);
                 setStory(newStory);
             }
             setStep('STORY_REVEAL');
@@ -362,6 +377,13 @@ const App: React.FC = () => {
 
     const handleGenerateImage = async () => {
         if (!results || !players) return;
+
+        // Quick play mode does not generate images, as it has no avatars.
+        if (players.gameStyle === 'quick') {
+            handleInitiatePrank();
+            return;
+        }
+
         setStep('IMAGE_GENERATION_LOADING');
         setError(null);
         try {
@@ -480,9 +502,7 @@ const App: React.FC = () => {
                         results={results}
                         players={players}
                         story={story}
-                        storyTone={storyTone}
                         fortuneImage={fortuneImage}
-                        setStoryTone={setStoryTone}
                         onGenerateStory={handleGenerateStory}
                         onGenerateImage={handleGenerateImage}
                         onStartPrank={handleInitiatePrank}

@@ -91,7 +91,7 @@ const RickRollPrank: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
             <p className="text-indigo-200 text-sm mt-4">True living portraits are coming soon, I promise!</p>
             <button
                 onClick={onComplete}
-                className="w-full max-w-sm mx-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg shadow-lg transform transition-all duration-300 hover:scale-105 mt-4"
+                className="w-full max-w-sm mx-auto bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-bold py-3 px-4 rounded-lg text-lg shadow-lg transform transition-all duration-300 hover:scale-105 mt-4"
             >
                 See What's ACTUALLY Next
             </button>

@@ -146,7 +146,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ category, categoryKey, libr
                 <button
                     onClick={handleConfirm}
                     disabled={selections.length === 0}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed border-b-4 border-green-800 active:border-b-0 active:translate-y-1"
                 >
                     {selections.length < 4 && selections.length > 0 ? `Add ${selections.length} & Randomize` : `Add ${selections.length} Selections`}
                 </button>

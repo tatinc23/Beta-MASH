@@ -43,28 +43,32 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
 
     const getLibraryForCategory = (categoryKey: string): LibraryCategory | string[] | null => {
         if (players.mode === 'coop' && players.relationship) {
-            const lib = COOP_CATEGORIES[players.relationship as keyof typeof COOP_CATEGORIES];
-            const options = lib?.[categoryKey as keyof typeof lib];
-            return options ? options : null;
+            const relationshipCategories = COOP_CATEGORIES[players.relationship as keyof typeof COOP_CATEGORIES];
+            return relationshipCategories?.[categoryKey as keyof typeof relationshipCategories] || null;
         }
 
-        const lib = ALL_CATEGORIES[categoryKey];
-        if (!lib) return null;
-        if (Array.isArray(lib)) return lib;
+        // --- SOLO MODE LOGIC ---
+        const categoryData = ALL_CATEGORIES[categoryKey];
+        if (!categoryData) {
+            return null;
+        }
+
+        // If it's a simple array like "Housing", return it.
+        if (Array.isArray(categoryData)) {
+            return categoryData;
+        }
         
-        if (typeof lib === 'object' && 'singlePlayer' in lib) {
-            const singlePlayerLib = (lib as { singlePlayer: LibraryCategory }).singlePlayer;
-            return singlePlayerLib;
+        // If it's an object with singlePlayer/coop structure (like Spouse), return the singlePlayer part for solo mode.
+        if (typeof categoryData === 'object' && 'singlePlayer' in categoryData) {
+            return (categoryData as { singlePlayer: LibraryCategory }).singlePlayer;
+        }
+        
+        // Fallback for any other structure in solo mode that might be a valid library
+        if (typeof categoryData === 'object') {
+            return categoryData;
         }
 
-        if (typeof lib === 'object' && 'coop' in lib) {
-             const coopLib = (lib as { coop: LibraryCategory }).coop;
-             if (players.mode === 'coop') {
-                 return coopLib;
-             }
-        }
-
-        return lib as LibraryCategory | null;
+        return null; // Should not be reached for standard categories
     };
     
     const getRandomOptions = (categoryKey: string, count: number): string[] => {
@@ -178,7 +182,7 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
                 </details>
 
 
-                <button type="button" onClick={handleSurpriseMe} className="w-full mb-6 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg shadow-yellow-400/50 transform transition-all duration-300 hover:scale-105 text-base">✨ Surprise Me!</button>
+                <button type="button" onClick={handleSurpriseMe} className="w-full mb-6 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 text-base border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1">✨ Surprise Me!</button>
                 <div className="space-y-4">
                      {selectedCategories.map((cat) => {
                         const { key, isCustom } = cat;
@@ -190,14 +194,19 @@ const CategoriesSetup: React.FC<{ onCategoriesSubmit: (categories: { [key: strin
                                    <h3 className="text-base font-semibold">{catInfo.icon} {catInfo.name}</h3>
                                    {!isCustom && getLibraryForCategory(key) && (
                                      <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => setIsLibraryOpen(key)} className="bg-purple-500/80 hover:bg-purple-500 text-white font-bold p-2 rounded-lg text-xs" title="Open Library">📚</button>
+                                        <button type="button" onClick={() => setIsLibraryOpen(key)} className="bg-purple-500/80 hover:bg-purple-500 text-white font-bold p-2 rounded-lg text-xs border-b-2 border-purple-700 active:border-b-0 active:translate-y-px transition-transform transform" title="Open Library">📚</button>
                                         <button type="button" onClick={() => {
                                              const randoms = getRandomOptions(key, 4);
                                              if (randoms.length > 0) setCategories(prev => ({...prev, [key]: randoms}));
-                                        }} className="bg-purple-500/80 hover:bg-purple-500 text-white font-bold p-2 rounded-lg text-xs" title="Randomize">🎲</button>
+                                        }} className="bg-purple-500/80 hover:bg-purple-500 text-white font-bold p-2 rounded-lg text-xs border-b-2 border-purple-700 active:border-b-0 active:translate-y-px transition-transform transform" title="Randomize">🎲</button>
                                      </div>
                                    )}
                                 </div>
+                                {key === 'Spouse' && (
+                                    <p className="text-xs text-indigo-300/80 mb-2 italic text-center bg-black/20 p-2 rounded-md">
+                                        Note: Any celebrity names are used for parody and entertainment purposes only. The results are not real and are not endorsed by any public figures.
+                                    </p>
+                                )}
                                 <div className="grid grid-cols-2 gap-2">
                                     {categories[key]?.map((option, index) => <input key={index} type="text" value={option} onChange={(e) => setCategories(prev => ({ ...prev, [key]: prev[key].map((item, i) => (i === index ? e.target.value : item)) }))} className="w-full bg-white/10 rounded-md p-2 text-white text-sm placeholder-indigo-300/70 focus:ring-1 focus:ring-pink-400 focus:outline-none" placeholder={`Option ${index+1}`} required />)}
                                 </div>

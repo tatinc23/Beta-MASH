@@ -5,7 +5,7 @@ const UpgradeTeaser: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
         {
             emoji: '🎬',
             title: 'Living Portraits',
-            description: 'Bring your final M.A.S.H. portrait to life with a short, animated video!',
+            description: 'Bring your final M.A.S.H. portrait to life with a short, animated video! The clip below is just an example. (Note: Video generation is an advanced feature and may incur higher costs.)',
             videoSrc: '/assets/living-portrait-final.mp4',
             posterSrc: '/assets/living-portrait-poster.png'
         },
@@ -47,7 +47,7 @@ const UpgradeTeaser: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
                 ))}
             </div>
             <div className="border-t border-white/10 pt-6">
-                <button onClick={onRestart} className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform hover:scale-105">Play Again!</button>
+                <button onClick={onRestart} className="w-full bg-gradient-to-r from-pink-500 to-yellow-400 text-black font-bold py-3 px-4 rounded-lg text-lg shadow-lg transform transition-all duration-300 hover:scale-105">Play Again!</button>
             </div>
         </div>
     );

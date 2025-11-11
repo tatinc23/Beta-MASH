@@ -538,8 +538,8 @@ const App: React.FC = () => {
                 {error && <div className="bg-red-500/80 text-white p-3 rounded-lg text-center my-4 animate-fade-in text-sm">{error} <button onClick={() => setError(null)} className="font-bold ml-2 underline">OK</button></div>}
                 {renderContent()}
             </div>
-             <div className="fixed bottom-4 right-4 flex gap-3 z-40">
-                {ENABLE_FEEDBACK && <Feedback />}
+             <div className="fixed bottom-4 left-4 flex gap-3 z-40">
+                {ENABLE_FEEDBACK && step !== 'ELIMINATION' && <Feedback />}
                 <button
                     onClick={toggleMute}
                     className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-full w-14 h-14 flex items-center justify-center shadow-lg transform transition-transform hover:scale-110"

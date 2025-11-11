@@ -4,7 +4,7 @@ const FeedbackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
     return (
         <button
             onClick={onClick}
-            className="fixed bottom-4 right-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-full w-14 h-14 flex items-center justify-center shadow-lg transform transition-transform hover:scale-110 z-40"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-full w-14 h-14 flex items-center justify-center shadow-lg transform transition-transform hover:scale-110"
             aria-label="Leave feedback"
             title="Leave feedback"
         >
